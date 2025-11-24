@@ -23,7 +23,7 @@ jobs:
       APPSHOT_DISABLE_FONT_SCAN: ${{ startsWith(matrix.os, 'ubuntu') && '1' || '' }}
     
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       
       - name: Setup Node.js ${{ matrix.node }}
         uses: actions/setup-node@v5
