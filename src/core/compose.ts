@@ -7,6 +7,7 @@ import { renderBackground, validateBackgroundDimensions } from './background.js'
 import { applyRoundedCorners } from './mask-generator.js';
 import { calculateAdaptiveCaptionHeight, wrapText } from './text-utils.js';
 import { FontService } from '../services/fonts.js';
+import { resolveLayoutSpacing } from './layout-utils.js';
 
 /**
  * Parse font name to extract style and weight
@@ -226,9 +227,14 @@ export async function composeAppStoreScreenshot(options: ComposeOptions): Promis
   const framePosition = deviceConfig.framePosition !== undefined ? deviceConfig.framePosition : 'center';
   const deviceFrameScale = deviceConfig.frameScale;
 
-  const boxCfg = deviceConfig.captionBox || captionConfig.box || {};
-  const marginTop = boxCfg.marginTop || 0;
-  const marginBottom = boxCfg.marginBottom || 0;
+  const {
+    captionTopInsetAbove,
+    deviceTopInsetBelow,
+    bottomInset,
+    gapAbove,
+    gapBelow,
+    overlayBottomSpacing
+  } = resolveLayoutSpacing(captionConfig, deviceConfig);
   const sideMarginDbg = captionConfig.background?.sideMargin ?? 30;
 
   if (verbose) {
@@ -236,7 +242,14 @@ export async function composeAppStoreScreenshot(options: ComposeOptions): Promis
     console.log(pc.dim(`      Caption position: ${captionPosition}`));
     console.log(pc.dim(`      Frame position: ${String(framePosition)}`));
     console.log(pc.dim(`      Frame scale: ${deviceFrameScale ?? '(auto)'}`));
-    console.log(pc.dim(`      Margins: top=${marginTop}px, bottom=${marginBottom}px, side=${sideMarginDbg}px`));
+    const insetTop = captionPosition === 'above' ? captionTopInsetAbove : deviceTopInsetBelow;
+    console.log(pc.dim(`      Insets: top=${insetTop}px, bottom=${bottomInset}px, side=${sideMarginDbg}px`));
+    if (captionPosition !== 'overlay') {
+      const gap = captionPosition === 'below' ? gapBelow : gapAbove;
+      console.log(pc.dim(`      Caption gap: ${gap}px`));
+    } else {
+      console.log(pc.dim(`      Overlay bottom spacing: ${overlayBottomSpacing}px`));
+    }
   }
 
   // Calculate dimensions based on output
@@ -431,7 +444,7 @@ export async function composeAppStoreScreenshot(options: ComposeOptions): Promis
       // Get caption box config
       const captionBoxConfig = deviceConfig.captionBox || captionConfig.box || {};
       const lineHeight = captionBoxConfig.lineHeight || 1.4;
-      const topMargin = captionBoxConfig.marginTop || 0;
+      const captionTop = captionTopInsetAbove;
 
       if (captionLines.length === 0) {
         // Fallback if no lines were calculated
@@ -487,7 +500,7 @@ export async function composeAppStoreScreenshot(options: ComposeOptions): Promis
 
       composites.push({
         input: captionImage,
-        top: Math.max(0, topMargin),
+        top: Math.max(0, captionTop),
         left: 0
       });
 
@@ -500,9 +513,9 @@ export async function composeAppStoreScreenshot(options: ComposeOptions): Promis
           deviceTop,
           deviceBottom: deviceTop + targetDeviceHeight,
           deviceHeight: targetDeviceHeight,
-          captionTop: Math.max(0, topMargin),
+          captionTop: Math.max(0, captionTop),
           captionHeight,
-          marginTop: topMargin,
+          marginTop: captionTopInsetAbove,
           marginBottom: bm
         });
       }
@@ -550,17 +563,15 @@ export async function composeAppStoreScreenshot(options: ComposeOptions): Promis
 
     // For 'above' positioning, reduce available height by caption
     // For 'below' positioning, we'll adjust positioning later but calculate scale normally
-    const boxConfig = deviceConfig.captionBox || captionConfig.box || {};
-    const topMargin = boxConfig.marginTop || 0;
-    const bottomMargin = boxConfig.marginBottom || 0;
-
     if (captionPosition === 'above') {
-      availableHeight = Math.max(100, outputHeight - captionHeight - topMargin - bottomMargin);
+      const reserved = captionTopInsetAbove + captionHeight + gapAbove + bottomInset;
+      availableHeight = Math.max(100, outputHeight - reserved);
     } else if (captionPosition === 'below') {
-      availableHeight = Math.max(100, outputHeight - captionHeight - bottomMargin);
+      const reserved = deviceTopInsetBelow + captionHeight + gapBelow + bottomInset;
+      availableHeight = Math.max(100, outputHeight - reserved);
     } else {
       // 'overlay' positioning doesn't reduce available space
-      availableHeight = outputHeight - bottomMargin;
+      availableHeight = Math.max(100, outputHeight - bottomInset);
     }
 
     // Respect explicit frameScale by basing scale on the full output height.
@@ -765,148 +776,74 @@ export async function composeAppStoreScreenshot(options: ComposeOptions): Promis
     }
 
     // Recalculate position with actual caption height
-    let availableSpace = 0; // Declare here for wider scope
     if (captionPosition === 'above') {
-      // Caption above: position device below caption area
+      const captionBottom = captionTopInsetAbove + captionHeight;
+      const deviceAreaTop = captionBottom + gapAbove;
+      const deviceAreaBottom = canvasHeight - bottomInset;
+      const availableTrack = deviceAreaBottom - deviceAreaTop - targetDeviceHeight;
+      const clampedTrack = Math.max(0, availableTrack);
+
       if (typeof framePosition === 'number') {
-        // Custom position as percentage from top (0-100)
-        const boxConfig = deviceConfig.captionBox || captionConfig.box || {};
-        const topMargin = boxConfig.marginTop || 0;
-        const bottomMargin = boxConfig.marginBottom || 0;
-        availableSpace = canvasHeight - topMargin - captionHeight - bottomMargin - targetDeviceHeight;
-
-        // Fix for watch: if there's no available space, adjust positioning to work
-        if (availableSpace < 0 && frameMetadata.deviceType === 'watch') {
-          // For watch with negative space, position relative to full canvas minus device height
-          // This allows the watch to overlap with the caption area when needed
-          const totalAvailable = canvasHeight - bottomMargin - targetDeviceHeight;
-
-          if (verbose) {
-            console.log(pc.dim('      Watch positioning fix applied (overlap mode)'));
-            console.log(pc.dim(`        Original available: ${availableSpace}px`));
-            console.log(pc.dim(`        Using total available: ${totalAvailable}px`));
-          }
-
-          // Position from top of canvas, allowing overlap with caption
-          deviceTop = Math.floor(totalAvailable * (framePosition / 100));
-        } else {
-          // Normal positioning for other devices or when space is available
-          deviceTop = topMargin + captionHeight + Math.floor(availableSpace * (framePosition / 100));
-
-          if (verbose) {
-            console.log(pc.dim('      Frame positioning (above mode):'));
-            console.log(pc.dim(`        Canvas height: ${canvasHeight}px`));
-            console.log(pc.dim(`        Caption height: ${captionHeight}px`));
-            console.log(pc.dim(`        Device height: ${targetDeviceHeight}px`));
-            console.log(pc.dim(`        Top margin: ${topMargin}px`));
-            console.log(pc.dim(`        Bottom margin: ${bottomMargin}px`));
-            console.log(pc.dim(`        Available space: ${availableSpace}px`));
-            console.log(pc.dim(`        Frame position %: ${framePosition}`));
-            console.log(pc.dim(`        Calculated deviceTop: ${deviceTop}px`));
-          }
-        }
-
-        // Debug logging for watch positioning issue
-        if (verbose && frameMetadata.deviceType === 'watch') {
-          console.log(pc.dim('      Watch positioning debug:'));
-          console.log(pc.dim(`        Canvas height: ${canvasHeight}px`));
-          console.log(pc.dim(`        Caption height: ${captionHeight}px`));
-          console.log(pc.dim(`        Target device height: ${targetDeviceHeight}px`));
-          console.log(pc.dim(`        Available space: ${availableSpace}px`));
-          console.log(pc.dim(`        Device top: ${deviceTop}px`));
-        }
+        deviceTop = deviceAreaTop + Math.floor(clampedTrack * (framePosition / 100));
       } else if (framePosition === 'top') {
-        const boxConfig = deviceConfig.captionBox || captionConfig.box || {};
-        const topMargin = boxConfig.marginTop || 0;
-        deviceTop = topMargin + captionHeight;
+        deviceTop = deviceAreaTop;
       } else if (framePosition === 'bottom') {
-        const boxConfig = deviceConfig.captionBox || captionConfig.box || {};
-        const bottomMargin = boxConfig.marginBottom || 0;
-        deviceTop = canvasHeight - bottomMargin - targetDeviceHeight;
+        deviceTop = deviceAreaBottom - targetDeviceHeight;
       } else if (framePosition === 'center') {
-        // Default centered positioning
-        const boxConfig = deviceConfig.captionBox || captionConfig.box || {};
-        const topMargin = boxConfig.marginTop || 0;
-        const bottomMargin = boxConfig.marginBottom || 0;
-        const availableSpace2 = canvasHeight - topMargin - captionHeight - bottomMargin;
-        deviceTop = topMargin + captionHeight + Math.floor((availableSpace2 - targetDeviceHeight) / 2);
+        deviceTop = deviceAreaTop + Math.floor(clampedTrack / 2);
       } else {
-        const boxConfig = deviceConfig.captionBox || captionConfig.box || {};
-        const topMargin = boxConfig.marginTop || 0;
-        deviceTop = topMargin + captionHeight;
+        deviceTop = deviceAreaTop;
       }
 
-      // Ensure device doesn't go off canvas
-      const boxConfig2 = deviceConfig.captionBox || captionConfig.box || {};
-      const bottomMargin2 = boxConfig2.marginBottom || 0;
-      // For watch with negative available space, allow overlap with caption
-      if (frameMetadata.deviceType === 'watch' && typeof framePosition === 'number' && availableSpace < 0) {
-        // Only clamp to canvas bounds, not caption height
-        // With partialFrame, allow device to extend beyond canvas by the cropped amount
-        const bottomAdjustment = partialFrame ? croppedPixels : 0;
-        deviceTop = Math.floor(Math.max(0, Math.min(deviceTop, canvasHeight - bottomMargin2 - targetDeviceHeight + bottomAdjustment)));
-      } else {
-        // Normal clamping for other devices
-        const topMargin2 = (deviceConfig.captionBox || captionConfig.box || {}).marginTop || 0;
-        // With partialFrame, allow device to extend beyond canvas by the cropped amount
-        const bottomAdjustment = partialFrame ? croppedPixels : 0;
-        deviceTop = Math.floor(Math.max(topMargin2 + captionHeight, Math.min(deviceTop, canvasHeight - bottomMargin2 - targetDeviceHeight + bottomAdjustment)));
+      const bottomAdjustment = partialFrame ? croppedPixels : 0;
+      const minDeviceTop = Math.max(0, deviceAreaTop);
+      const maxDeviceTop = deviceAreaBottom - targetDeviceHeight + bottomAdjustment;
+      deviceTop = Math.floor(Math.max(minDeviceTop, Math.min(deviceTop, maxDeviceTop)));
+
+      if (verbose) {
+        console.log(pc.dim('      Frame positioning (above mode):'));
+        console.log(pc.dim(`        Device area: ${deviceAreaTop}px → ${deviceAreaBottom}px`));
+        console.log(pc.dim(`        Available track: ${availableTrack}px`));
+        console.log(pc.dim(`        Calculated deviceTop: ${deviceTop}px`));
       }
 
     } else if (captionPosition === 'below') {
-      // Caption below: position device in upper area, leaving space for caption at bottom
-      const captionBoxConfig = deviceConfig.captionBox || captionConfig.box || {};
-      // Apply a sensible default gap when marginTop is undefined to meet user expectations
-      // of a small clearance between device and caption. If marginTop is explicitly set,
-      // it wins. Otherwise we default to max(12px, half border width).
-      const borderWidthForGap = (deviceConfig.captionBorder || captionConfig.border)?.width || 0;
-      const defaultBelowGap = Math.max(12, Math.round(borderWidthForGap / 2));
-      const marginTop = (captionBoxConfig.marginTop !== undefined)
-        ? captionBoxConfig.marginTop
-        : defaultBelowGap;
-      const marginBottom = captionBoxConfig.marginBottom || 0;
-
-      // Calculate ideal positions
-      // Device area is everything except caption, marginTop gap, and marginBottom
-      const deviceAreaHeight = canvasHeight - captionHeight - marginTop - marginBottom;
-      const spaceWithMargins = deviceAreaHeight - targetDeviceHeight;
-      const maxOverlapSlack = (canvasHeight - captionHeight) - targetDeviceHeight;
-      const effectiveAvailableSpace = spaceWithMargins >= 0
-        ? spaceWithMargins
-        : Math.max(0, maxOverlapSlack);
-
+      const captionAnchorTop = canvasHeight - bottomInset - captionHeight;
+      const deviceAreaTop = deviceTopInsetBelow;
+      const deviceAreaBottom = Math.max(deviceAreaTop, captionAnchorTop - gapBelow);
+      const availableTrack = deviceAreaBottom - deviceAreaTop - targetDeviceHeight;
+      const clampedTrack = Math.max(0, availableTrack);
 
       if (typeof framePosition === 'number') {
-        // Custom position as percentage within device area
-        deviceTop = Math.floor(effectiveAvailableSpace * (framePosition / 100));
+        deviceTop = deviceAreaTop + Math.floor(clampedTrack * (framePosition / 100));
       } else if (framePosition === 'top') {
-        deviceTop = 0;
+        deviceTop = deviceAreaTop;
       } else if (framePosition === 'bottom') {
-        deviceTop = effectiveAvailableSpace;
+        deviceTop = deviceAreaBottom - targetDeviceHeight;
       } else if (framePosition === 'center') {
-        // Default centered positioning in device area
-        deviceTop = Math.floor(effectiveAvailableSpace / 2);
+        deviceTop = deviceAreaTop + Math.floor(clampedTrack / 2);
       } else {
-        // Default to centered in device area
-        deviceTop = Math.floor(effectiveAvailableSpace / 2);
+        deviceTop = deviceAreaTop;
       }
 
-      // Ensure device doesn't go off canvas
-      // With partialFrame, allow device to extend beyond canvas by the cropped amount
       const bottomAdjustmentBelow = partialFrame ? croppedPixels : 0;
+      const minDeviceTop = deviceAreaTop;
+      const maxDeviceTop = deviceAreaBottom - targetDeviceHeight + bottomAdjustmentBelow;
+      deviceTop = Math.floor(Math.max(minDeviceTop, Math.min(deviceTop, maxDeviceTop)));
 
-      // Clamp device position to available space (allowing overlap slack when needed)
-      const maxDeviceTop = effectiveAvailableSpace + bottomAdjustmentBelow;
-      deviceTop = Math.floor(Math.max(0, Math.min(deviceTop, maxDeviceTop)));
-
-
+      if (verbose) {
+        console.log(pc.dim('      Frame positioning (below mode):'));
+        console.log(pc.dim(`        Device area: ${deviceAreaTop}px → ${deviceAreaBottom}px`));
+        console.log(pc.dim(`        Gap below: ${gapBelow}px`));
+        console.log(pc.dim(`        Calculated deviceTop: ${deviceTop}px`));
+      }
     } else {
       // 'overlay' positioning: position device using the full canvas height.
       // Per layout invariants, overlay is bottom-anchored by the caption box;
       // top margin should not influence device placement. Respect explicit
       // bottom spacing only.
       const marginTop = 0; // ignore top margin for overlay
-      const marginBottom = (deviceConfig.captionBox || captionConfig.box || {}).marginBottom || 0;
+      const marginBottom = overlayBottomSpacing;
 
       if (typeof framePosition === 'number') {
         // Custom position as percentage within available space (accounting for margins)
@@ -967,14 +904,14 @@ export async function composeAppStoreScreenshot(options: ComposeOptions): Promis
     let deviceTop;
 
     if (captionPosition === 'above') {
-      availableHeight = outputHeight - captionHeight;
-      deviceTop = Math.floor(captionHeight);
+      availableHeight = outputHeight - captionTopInsetAbove - captionHeight - gapAbove - bottomInset;
+      deviceTop = captionTopInsetAbove + captionHeight + gapAbove;
     } else if (captionPosition === 'below') {
-      availableHeight = outputHeight - captionHeight;
-      deviceTop = 0; // Start from top when caption is below
+      availableHeight = outputHeight - deviceTopInsetBelow - captionHeight - gapBelow - bottomInset;
+      deviceTop = deviceTopInsetBelow;
     } else {
       // 'overlay' positioning
-      availableHeight = outputHeight;
+      availableHeight = outputHeight - bottomInset;
       deviceTop = 0;
     }
 
@@ -999,7 +936,9 @@ export async function composeAppStoreScreenshot(options: ComposeOptions): Promis
 
     // For 'below' positioning, center the screenshot in the available device area
     if (captionPosition === 'below') {
-      deviceTop = Math.floor((availableHeight - targetHeight) / 2);
+      const deviceAreaBottom = (outputHeight - bottomInset - captionHeight) - gapBelow;
+      const track = Math.max(0, deviceAreaBottom - deviceTop - targetHeight);
+      deviceTop = deviceTop + Math.floor(track / 2);
     }
 
     // Center the screenshot horizontally
@@ -1026,12 +965,8 @@ export async function composeAppStoreScreenshot(options: ComposeOptions): Promis
       // Get caption box config
       const captionBoxConfig = deviceConfig.captionBox || captionConfig.box || {};
       const lineHeight = captionBoxConfig.lineHeight || 1.4;
-      const borderWidthForGap = (deviceConfig.captionBorder || captionConfig.border)?.width || 0;
-      const defaultBelowGap = Math.max(12, Math.round(borderWidthForGap / 2));
-      const marginTop = (captionBoxConfig.marginTop !== undefined)
-        ? captionBoxConfig.marginTop
-        : defaultBelowGap;
-      const bottomMargin = captionBoxConfig.marginBottom || 0;
+      const marginTop = gapBelow;
+      const marginBottom = bottomInset;
 
       if (captionLines.length === 0) {
         // Fallback if no lines were calculated
@@ -1081,7 +1016,7 @@ export async function composeAppStoreScreenshot(options: ComposeOptions): Promis
       // bottom under normal conditions, and moves down only if the device
       // intrudes into the reserved area.
       const deviceBottom = deviceTop + targetDeviceHeight; // includes watch bands
-      const bottomAnchorTop = canvasHeight - captionHeight - bottomMargin;
+      const bottomAnchorTop = canvasHeight - marginBottom - captionHeight;
       const justBelowDeviceTop = deviceBottom + marginTop;
       const captionTop = Math.max(bottomAnchorTop, justBelowDeviceTop);
       composites.push({
@@ -1150,10 +1085,8 @@ export async function composeAppStoreScreenshot(options: ComposeOptions): Promis
 
       // Position overlay text at bottom of canvas for overlay mode
       // Use marginBottom from captionBox if available, otherwise use paddingBottom
-      const captionBoxConfig2 = deviceConfig.captionBox || captionConfig.box || {};
-      const marginBottom = captionBoxConfig2.marginBottom;
+      const bottomSpacing = overlayBottomSpacing;
       const totalTextHeight = overlayLines.length * fontSize * lineHeight;
-
       // Use device-specific font if available, otherwise use global caption font
       const fontToUse = deviceConfig.captionFont || captionConfig.font;
 
@@ -1175,7 +1108,6 @@ export async function composeAppStoreScreenshot(options: ComposeOptions): Promis
       // Anchor overlay by the OUTER BOX bottom (including padding and border stroke)
       const bgPadding = backgroundConfig?.padding ?? 20;
       const strokeWidth = borderConfig?.width ?? 0; // stroke is centered on rect; half extends outward
-      const bottomSpacing = (marginBottom ?? captionConfig.paddingBottom ?? 60); // respect explicit 0
       const boxHeight = totalTextHeight + (bgPadding * 2);
       const rectBottom = canvasHeight - bottomSpacing - (strokeWidth > 0 ? strokeWidth / 2 : 0);
       const rectY = rectBottom - boxHeight; // top of the fill/border rects

@@ -87,18 +87,9 @@ export const templates: ScreenshotTemplate[] = [
     captionStyle: {
       font: 'SF Pro Display',
       fontsize: 64,
-      color: '#FFFFFF',
+      color: '#021d2f',
       position: 'above',
       align: 'center',
-      background: {
-        color: '#000000',
-        opacity: 0.6,
-        padding: 20,
-        sideMargin: 30
-      },
-      border: {
-        radius: 12
-      },
       box: {
         autoSize: true,
         maxLines: 3,
@@ -114,7 +105,8 @@ export const templates: ScreenshotTemplate[] = [
       },
       iphone: {
         // Add sensible top clearance for 'above' captions on iPhone
-        captionBox: { marginTop: 56 }
+        captionBox: { marginTop: 56 },
+        captionSize: 72
       },
       watch: {
         frameScale: 0.9,
@@ -123,17 +115,6 @@ export const templates: ScreenshotTemplate[] = [
         frameOffset: 17,
         captionSize: 24,
         captionPosition: 'above',
-        captionBackground: {
-          color: '#2b1b6d',
-          opacity: 0.85,
-          padding: 12,
-          sideMargin: 18
-        },
-        captionBorder: {
-          color: '#f093fb',
-          width: 2,
-          radius: 14
-        },
         captionBox: {
           marginBottom: 8,
           marginTop: 18,
@@ -168,20 +149,9 @@ export const templates: ScreenshotTemplate[] = [
     captionStyle: {
       font: 'Helvetica Neue',
       fontsize: 56,
-      color: '#f9fcfbff',
+      color: '#1b2a3a',
       position: 'above',
       align: 'center',
-      background: {
-        color: '#da3434ff',
-        opacity: 0.50,
-        padding: 18,
-        sideMargin: 25
-      },
-      border: {
-        color: '#FFFFFF',
-        width: 1,
-        radius: 10
-      },
       box: {
         autoSize: true,
         maxLines: 2,
@@ -194,24 +164,14 @@ export const templates: ScreenshotTemplate[] = [
       iphone: {
         frameScale: 0.95,
         framePosition: 50,
-        captionBox: { marginTop: 56 }
+        captionBox: { marginTop: 56 },
+        captionSize: 64
       },
       watch: {
         frameScale: 0.85,
         framePosition: 0,
         captionSize: 22,
         captionPosition: 'below',
-        captionBackground: {
-          color: '#ff6f9f',
-          opacity: 0.85,
-          padding: 12,
-          sideMargin: 18
-        },
-        captionBorder: {
-          color: '#ffffff',
-          width: 2,
-          radius: 12
-        },
         captionBox: {
           marginTop: 36,
           marginBottom: 12,
@@ -251,18 +211,7 @@ export const templates: ScreenshotTemplate[] = [
       fontsize: 64,
       color: '#FFFFFF',
       position: 'overlay',
-      align: 'center',
-      background: {
-        color: '#000000',
-        opacity: 0.8,
-        padding: 30,
-        sideMargin: 40
-      },
-      border: {
-        color: '#FFFFFF',
-        width: 2,
-        radius: 16
-      }
+      align: 'center'
     },
     deviceOverrides: {
       mac: {
@@ -279,7 +228,8 @@ export const templates: ScreenshotTemplate[] = [
         captionBox: {
           marginTop: 0,
           marginBottom: 20
-        }
+        },
+        captionSize: 72
       },
       ipad: {
         frameScale: 0.90,
@@ -294,17 +244,6 @@ export const templates: ScreenshotTemplate[] = [
         framePosition: 0,
         partialFrame: true,
         frameOffset: 17,
-        captionBackground: {
-          color: '#111322',
-          opacity: 0.9,
-          padding: 12,
-          sideMargin: 16
-        },
-        captionBorder: {
-          color: '#FFFFFF',
-          width: 2,
-          radius: 14
-        },
         captionBox: {
           marginBottom: 10,
           lineHeight: 1.4,
@@ -332,16 +271,8 @@ export const templates: ScreenshotTemplate[] = [
       color: '#7CFFCB',
       position: 'overlay',
       align: 'center',
-      background: {
-        color: '#111827',
-        opacity: 0.85,
-        padding: 32,
-        sideMargin: 44
-      },
-      border: {
-        color: '#7CFFCB',
-        width: 2,
-        radius: 18
+      box: {
+        marginBottom: 32
       }
     },
     deviceOverrides: {
@@ -359,7 +290,8 @@ export const templates: ScreenshotTemplate[] = [
         captionBox: {
           marginTop: 12,
           marginBottom: 24
-        }
+        },
+        captionSize: 70
       },
       ipad: {
         frameScale: 0.9,
@@ -376,17 +308,6 @@ export const templates: ScreenshotTemplate[] = [
         frameOffset: 17,
         captionSize: 26,
         captionPosition: 'below',
-        captionBackground: {
-          color: '#0B1120',
-          opacity: 0.9,
-          padding: 14,
-          sideMargin: 18
-        },
-        captionBorder: {
-          color: '#7CFFCB',
-          width: 2,
-          radius: 14
-        },
         captionBox: {
           marginTop: 14,
           marginBottom: 16,
@@ -417,20 +338,9 @@ export const templates: ScreenshotTemplate[] = [
     captionStyle: {
       font: 'Georgia',
       fontsize: 68,
-      color: '#FFFFFF',
+      color: '#132235',
       position: 'below',
       align: 'center',
-      background: {
-        color: '#043f5dff',
-        opacity: 0.5,
-        padding: 20,
-        sideMargin: 30
-      },
-      border: {
-        color: '#195297ff',
-        width: 1,
-        radius: 8
-      },
       box: {
         autoSize: true,
         maxLines: 2,
@@ -443,7 +353,8 @@ export const templates: ScreenshotTemplate[] = [
       iphone: {
         frameScale: 0.9,
         framePosition: 50,
-        captionBox: { marginBottom: 60 }
+        captionBox: { marginBottom: 60 },
+        captionSize: 76
       },
       mac: {
         frameScale: 0.9,
@@ -489,17 +400,6 @@ export const templates: ScreenshotTemplate[] = [
       color: '#FFFFFF',
       position: 'above',
       align: 'center',
-      background: {
-        color: '#000000',
-        opacity: 0.6,
-        padding: 25,
-        sideMargin: 35
-      },
-      border: {
-        color: '#f3f4f5ff',
-        width: 1,
-        radius: 10
-      },
       box: {
         autoSize: true,
         maxLines: 3,
@@ -537,7 +437,8 @@ export const templates: ScreenshotTemplate[] = [
       }, iphone: {
         frameScale: 0.9,
         framePosition: 50,
-        captionBox: { marginTop: 20 }
+        captionBox: { marginTop: 20 },
+        captionSize: 72
       }
     }
   },
@@ -564,15 +465,6 @@ export const templates: ScreenshotTemplate[] = [
       color: '#FFFFFF',
       position: 'above',
       align: 'center',
-      background: {
-        color: '#FF006E',
-        opacity: 0.7,
-        padding: 22,
-        sideMargin: 25
-      },
-      border: {
-        radius: 24
-      },
       box: {
         autoSize: true,
         maxLines: 2,
@@ -593,7 +485,8 @@ export const templates: ScreenshotTemplate[] = [
       iphone: {
         frameScale: 0.9,
         framePosition: 50,
-        captionBox: { marginTop: 56 }
+        captionBox: { marginTop: 56 },
+        captionSize: 76
       },
       watch: {
         frameScale: 0.75,
@@ -634,21 +527,9 @@ export const templates: ScreenshotTemplate[] = [
     captionStyle: {
       font: 'Helvetica',
       fontsize: 54,
-      color: '#2c3e50',
+      color: '#0f1e2d',
       position: 'above',
-      align: 'left',
-      paddingLeft: 50,
-      background: {
-        color: '#FFFFFF',
-        opacity: 0.95,
-        padding: 30,
-        sideMargin: 40
-      },
-      border: {
-        color: '#1F5F8B',
-        width: 2,
-        radius: 14
-      },
+      align: 'center',
       box: {
         autoSize: true,
         maxLines: 3,
@@ -662,21 +543,13 @@ export const templates: ScreenshotTemplate[] = [
         frameScale: 0.90,
         framePosition: 25
       },
+      iphone: {
+        captionSize: 64
+      },
       watch: {
         frameScale: 0.80,
         framePosition: 75,
         captionSize: 18,
-        captionBackground: {
-          color: '#eef1f5',
-          opacity: 0.9,
-          padding: 12,
-          sideMargin: 18
-        },
-        captionBorder: {
-          color: '#f6d7d7ff',
-          width: 1,
-          radius: 5
-        },
         captionBox: {
           marginTop: 12,
           marginBottom: 12,
@@ -727,14 +600,26 @@ export function applyTemplateToConfig(
   // Apply background
   config.background = template.background;
 
-  // Apply caption style
-  // Use nullish coalescing so explicit zeros are respected (e.g., paddingBottom: 0)
-  config.caption = {
-    ...config.caption,
-    ...template.captionStyle,
-    paddingTop: template.captionStyle.paddingTop ?? 100,
-    paddingBottom: template.captionStyle.paddingBottom ?? 60
+  const templateCaptionStyle = template.captionStyle || {};
+  const captionBackgroundProvided = Object.prototype.hasOwnProperty.call(templateCaptionStyle, 'background');
+  const captionBorderProvided = Object.prototype.hasOwnProperty.call(templateCaptionStyle, 'border');
+
+  // Apply caption style (respect explicit zeros via nullish coalescing)
+  const mergedCaption: CaptionConfig = {
+    ...(config.caption || {}),
+    ...templateCaptionStyle,
+    paddingTop: templateCaptionStyle.paddingTop ?? (config.caption?.paddingTop ?? 100),
+    paddingBottom: templateCaptionStyle.paddingBottom ?? (config.caption?.paddingBottom ?? 60)
   } as CaptionConfig;
+
+  if (!captionBackgroundProvided) {
+    delete (mergedCaption as any).background;
+  }
+  if (!captionBorderProvided) {
+    delete (mergedCaption as any).border;
+  }
+
+  config.caption = mergedCaption;
 
   // Apply device styles
   if (config.devices) {
@@ -751,6 +636,15 @@ export function applyTemplateToConfig(
         captionPosition: template.captionStyle.position,
         ...override  // Apply device-specific overrides
       };
+
+      const overrideHasBackground = !!override && Object.prototype.hasOwnProperty.call(override, 'captionBackground');
+      const overrideHasBorder = !!override && Object.prototype.hasOwnProperty.call(override, 'captionBorder');
+      if (!overrideHasBackground) {
+        delete mergedDevice.captionBackground;
+      }
+      if (!overrideHasBorder) {
+        delete mergedDevice.captionBorder;
+      }
 
       // Ensure template font size changes take effect:
       // If the template did NOT provide a per-device captionSize override,
