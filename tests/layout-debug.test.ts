@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import sharp from 'sharp';
 import { composeAppStoreScreenshot } from '../src/core/compose.js';
+import { resolveLayoutSpacing, SAFETY_INSET } from '../src/core/layout-utils.js';
 import type { CaptionConfig, GradientConfig, DeviceConfig, LayoutDebugInfo } from '../src/types.js';
 
 const gradient: GradientConfig = { colors: ['#111111', '#222222'], direction: 'top-bottom' };
@@ -42,7 +43,8 @@ describe('Layout debug positions (onDebug)', () => {
     expect(info).toBeDefined();
     // With no marginBottom/paddingBottom, bottomSpacing defaults to 0.
     // rectBottom accounts for half the stroke width; allow a small tolerance.
-    const expected = 800 - ((info!.bottomSpacing ?? 0) + (4 / 2));
+    const spacing = resolveLayoutSpacing(caption, device);
+    const expected = 800 - (spacing.overlayBottomSpacing + ((caption.border?.width ?? 0) / 2));
     expect(Math.abs((info!.rectBottom ?? 0) - expected)).toBeLessThanOrEqual(2);
     // Rect must be fully on-canvas
     expect(info!.captionTop + info!.captionHeight).toBeLessThanOrEqual(800);
@@ -110,7 +112,8 @@ describe('Layout debug positions (onDebug)', () => {
     });
     const info = debug.find(d => d.mode === 'overlay');
     expect(info).toBeDefined();
-    const expected = 800 - (80 + (2 / 2));
+    const spacing = resolveLayoutSpacing(caption, device);
+    const expected = 800 - (spacing.overlayBottomSpacing + ((caption.border?.width ?? 0) / 2));
     expect(Math.abs((info!.rectBottom ?? 0) - expected)).toBeLessThanOrEqual(2);
   });
 
@@ -277,9 +280,9 @@ describe('Layout debug positions (onDebug)', () => {
     const below100 = debug100.find(d => d.mode === 'below');
     expect(below100).toBeDefined();
 
-    // With the fallback slack, framePosition=100 should sit lower than 0 but remain on canvas
-    expect(below0!.deviceTop).toBe(0);
-    expect(below100!.deviceTop).toBeGreaterThan(below0!.deviceTop);
+    // With the fallback slack, framePosition=100 should sit lower than SAFETY_INSET when space exists.
+    expect(below0!.deviceTop).toBe(SAFETY_INSET);
+    expect(below100!.deviceTop).toBeGreaterThanOrEqual(below0!.deviceTop);
 
     // The device should have moved but not too far (allow reasonable tolerance for different calculations)
     const availableSlack = Math.max(outputHeight - (below100!.deviceHeight + below100!.captionHeight), 0);

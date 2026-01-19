@@ -10,7 +10,14 @@
 [![Node.js Version](https://img.shields.io/node/v/appshot-cli.svg)](https://nodejs.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-🆕 **Version 0.9.1** - **Fastlane Export Integration & Screenshot Ordering**
+🆕 **Version 0.9.2** - **Simplified Layout Planner & Safe Caption Insets**
+- **One Layout Engine**: Every caption/device combo now runs through a single planner, so presets only style things—you never fight per-template math again.
+- **Safety Insets**: Automatic 40 px top/bottom protection plus default 48 px (above) / 36 px (below) gaps keep text clear of Apple’s quirky screenshot cropping.
+- **Template Consistency**: All built-in templates inherit the same spacing and only override fonts/colors; watch captions still cap at 36 px automatically.
+- **Caption-Only Presets**: Presets now render typography without auto-added boxes or borders so screenshots feel native to App Store Connect; add backgrounds manually if you really need them.
+- **Verbose Debugging**: `appshot build --dry-run --verbose` now prints `Insets` / `Caption gap` lines so you can reason about spacing without opening the PSD.
+
+**Version 0.9.1** - **Fastlane Export Integration & Screenshot Ordering**
 - **Export Command**: New `appshot export` command for seamless Fastlane integration
 - **Screenshot Ordering**: New `appshot order` command to control App Store screenshot sequence
 - **Order Flag**: Export with `--order` to add numeric prefixes (01_, 02_, etc.)
@@ -959,6 +966,14 @@ appshot style --device iphone
 }
 ```
 
+#### Safe Layout Defaults (NEW in v0.9.2)
+
+- **40 px Safety Insets** automatically pad the top/bottom of every canvas so captions survive App Store rounding—no manual margins required.
+- **48 px Above / 36 px Below Gaps** keep the caption box visually detached from the device; override with `caption.box.marginTop` only if you truly need a different gap.
+- **Bottom breathing room**: Increase `caption.box.marginBottom` per device (e.g., 80 px for iPad, 140 px for MacBook) whenever App Store Connect crops the screenshot bottom edge; the planner pushes the device up while keeping captions pinned.
+- **Templates Only Style**: Built-in presets now just set fonts/colors; spacing always comes from the planner, so switching templates won’t break compliance.
+- **Verbose Metrics**: Run `appshot build --dry-run --verbose` to see `Insets`, `Caption gap`, and `Overlay bottom spacing` lines for each device, then tweak the per-device `captionBox` margins without touching the template math.
+
 #### Caption Styling (Enhanced in v0.8.7)
 
 Create professional captions with customizable backgrounds and borders:
@@ -1326,7 +1341,7 @@ iPad Pro 12.9" (3rd gen) screenshots are automatically renamed with the `IPAD_PR
 - **CI/CD**: Use `--copy` for portable archives
 - **Clean**: Use `--clean` to remove old exports before creating new ones
 
-### Screenshot Ordering (NEW! v0.9.1)
+### Screenshot Ordering
 
 > **📌 Important Discovery**: Fastlane uploads screenshots in alphabetical order by filename. Without explicit ordering, your carefully arranged screenshots may appear in the wrong sequence on the App Store!
 
@@ -1378,7 +1393,7 @@ EOF
 #### 1. Nested Directory Limitations
 **Problem**: Fastlane's `deliver` command struggles with nested device directories inside language folders.
 
-**Solution**: Appshot v0.9.1+ automatically flattens the structure during export:
+**Solution**: Appshot automatically flattens the structure during export:
 ```bash
 # Appshot structure (nested):
 final/iphone/en/home.png →
