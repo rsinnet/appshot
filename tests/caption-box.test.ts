@@ -16,7 +16,7 @@ describe('Caption Box System', () => {
     });
 
     it('should calculate characters per line', () => {
-      const chars = calculateCharsPerLine(1290, 64, 40);
+      const chars = calculateCharsPerLine(1290, 64);
       expect(chars).toBeGreaterThan(0);
       expect(chars).toBeLessThan(50); // Reasonable limit for this width
     });

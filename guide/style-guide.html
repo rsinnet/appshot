@@ -1,0 +1,2007 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AppShot Style System Guide (Interactive)</title>
+  <style>
+    :root {
+      --bg1: #667eea;
+      --bg2: #764ba2;
+      --ink: #1f2937;
+      --muted: #6b7280;
+      --panel: #ffffff;
+      --panel-ink: #111827;
+      --border: #e5e7eb;
+      --accent: #4f46e5;
+      --ok: #16a34a;
+      --warn: #f59e0b;
+      --code-bg: #0b1020;
+      --code-ink: #cbd5e1;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      /* Canvas scaling factor - adjust based on viewport */
+      --canvas-scale: 0.3;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, system-ui, Helvetica, Arial, sans-serif;
+      color: var(--ink);
+      background: linear-gradient(135deg, var(--bg1), var(--bg2));
+      min-height: 100vh;
+      padding: 32px 16px;
+    }
+    /* App Shot theme overrides when embedded */
+    :root.theme-appshot {
+      --bg1: #0b0b11;
+      --bg2: #0b0b11;
+      --ink: #e5e7eb;
+      --muted: #9ca3af;
+      --panel: #0f1117;
+      --panel-ink: #e5e7eb;
+      --border: #242938;
+      --accent: #a78bfa;
+      --ok: #22c55e;
+      --warn: #f59e0b;
+      --code-bg: #0b1020;
+      --code-ink: #cbd5e1;
+    }
+    body.theme-appshot { color-scheme: dark; }
+    body.theme-appshot .wrap { box-shadow: 0 24px 64px rgba(0,0,0,0.55); }
+    body.theme-appshot .controls, body.theme-appshot .preview { border-color: var(--border); }
+    body.theme-appshot .preset-row { background: #0f172a; }
+    body.theme-appshot .tip { background: #0f172a; }
+    body.theme-appshot .row input[type="text"],
+    body.theme-appshot .row input[type="number"],
+    body.theme-appshot .row select,
+    body.theme-appshot .row textarea { background: #0b0f1a; color: var(--panel-ink); border-color: var(--border); }
+    body.theme-appshot .chip { border-color: var(--border); color: var(--panel-ink); }
+    body.theme-appshot .btn-secondary { background: #0b0f1a; color: var(--panel-ink); }
+    body.theme-appshot .btn-secondary:hover { background: #111827; }
+    body.theme-appshot .btn-primary { background: var(--accent); border-color: var(--accent); }
+    body.theme-appshot .canvas { border-color: var(--border); box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+    .wrap {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: var(--panel);
+      color: var(--panel-ink);
+      border-radius: 16px;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.25);
+      padding: 28px;
+    }
+    header h1 {
+      margin: 0 0 6px 0;
+      font-size: 28px;
+      letter-spacing: -0.01em;
+      background: linear-gradient(135deg, var(--bg1), var(--bg2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    header p { margin: 0; color: var(--muted); }
+
+    .grid {
+      display: grid;
+      grid-template-columns: minmax(260px, 320px) 1fr;
+      gap: 20px;
+      margin-top: 24px;
+      align-items: start;
+    }
+    @media (max-width: 980px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+
+    /* Controls */
+    .controls {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px 20px 16px 16px; /* a little extra right padding for value labels */
+    }
+    .controls h2 {
+      font-size: 16px;
+      margin: 0 0 12px 0;
+    }
+    .rows { display: grid; gap: 14px; }
+    .row { display: grid; gap: 10px; }
+    .row label { font-size: 12px; color: var(--muted); }
+    .row input[type="text"],
+    .row input[type="number"],
+    .row select, .row textarea {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #fff;
+      font-size: 14px;
+    }
+    .row textarea { min-height: 70px; resize: vertical; }
+    .row .inline { display: grid; grid-template-columns: 1fr 56px; gap: 10px; align-items: center; }
+    .row .inline small { color: var(--muted); text-align: right; justify-self: end; width: 56px; }
+    .row .inline input[type="range"] { width: 100%; }
+    .row .twocol {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .row .threecol {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+    }
+    .row .opts { display: flex; flex-wrap: wrap; gap: 8px; }
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      font-size: 12px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .chip input { margin: 0; }
+
+    /* Preview */
+    .preview {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+    }
+    .canvas-wrap { display: grid; gap: 8px; margin: 0 auto; justify-items: center; }
+    .canvas-label { font-size: 12px; color: var(--muted); }
+    .canvas-meta { font-size: 12px; color: var(--muted); }
+    /* Canvas container */
+    .canvas-container {
+      width: 100%;
+      max-width: 100%;
+      margin: 0 auto;
+      display: flex;
+      justify-content: center;
+    }
+    .canvas {
+      width: 100%;
+      max-width: 400px; /* Reasonable max width */
+      aspect-ratio: 9 / 19.5; /* iPhone ratio */
+      position: relative;
+      background: linear-gradient(180deg, #4a90e2, #7b68ee);
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .caption-area {
+      position: absolute;
+      left: 0;
+      width: 100%; /* Use full width, positioning handled in pixels */
+      background: transparent;
+      color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      text-align: center;
+      font-weight: 600;
+      letter-spacing: .3px;
+      z-index: 10;
+    }
+    .caption-overlay {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      background: transparent;
+      color: #fff;
+      padding: 8px 12px;
+      border-radius: 10px;
+      font-size: 12px;
+      bottom: 10%;
+      pointer-events: none;
+      z-index: 20;
+      max-width: calc(100% - 60px); /* match sideMargin=30 in renderer */
+      text-align: center;
+    }
+    .caption-box {
+      display: inline-block;
+      /* Width will be calculated in pixels */
+      margin: 0 auto;
+      border-radius: 12px;
+      overflow: hidden; /* ensure rounded corners clip content */
+      box-sizing: border-box;
+      -webkit-background-clip: padding-box;
+      background-clip: padding-box;
+    }
+    .device {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      background: transparent;
+      display: flex; 
+      flex-direction: column; 
+      align-items: center;
+      z-index: 5;
+    }
+    
+    /* Default phone styling */
+    .device.phone .device-body {
+      background: #111;
+      border-radius: 20px;
+      border: 3px solid #2f2f2f;
+      display: flex; 
+      flex-direction: column; 
+      align-items: center;
+      padding: 6px;
+      width: 100%;
+      height: 100%;
+    }
+    .device.phone .notch { width: 40%; height: 4%; background: #222; border-radius: 0 0 10px 10px; margin-bottom: 6px; }
+    .device.phone .screen { flex: 1; width: 100%; background: linear-gradient(180deg, #0ea5e9, #7c3aed); border-radius: 12px; }
+    .device.phone .home { width: 28%; height: 3px; background: #555; border-radius: 2px; margin-top: 6px; }
+    .device.phone .crown,
+    .device.phone .side-button,
+    .device.phone .watch-band-top,
+    .device.phone .watch-band-bottom { display: none; }
+    
+    /* Watch styling */
+    .device.watch {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .device.watch .device-body {
+      background: #1a1a1a;
+      border-radius: 35%;
+      border: 4px solid #333;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      width: 70%;
+      height: 60%;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    }
+    
+    .device.watch .screen {
+      width: 85%;
+      height: 85%;
+      background: linear-gradient(180deg, #0ea5e9, #7c3aed);
+      border-radius: 30%;
+    }
+    
+    /* Watch bands */
+    .device.watch .watch-band-top,
+    .device.watch .watch-band-bottom {
+      width: 40%;
+      height: 15%;
+      background: linear-gradient(180deg, #444, #666, #444);
+      border: 2px solid #333;
+      display: block;
+    }
+    
+    .device.watch .watch-band-top {
+      border-radius: 8px 8px 0 0;
+      margin-bottom: -4px;
+    }
+    
+    .device.watch .watch-band-bottom {
+      border-radius: 0 0 8px 8px;
+      margin-top: -4px;
+    }
+    
+    /* Crown and button */
+    .device.watch .crown {
+      position: absolute;
+      right: -8px;
+      top: 35%;
+      width: 8px;
+      height: 20px;
+      background: #666;
+      border-radius: 4px;
+      border: 1px solid #444;
+    }
+    
+    .device.watch .side-button {
+      position: absolute;
+      right: -6px;
+      top: 55%;
+      width: 6px;
+      height: 12px;
+      background: #555;
+      border-radius: 3px;
+    }
+    
+    .device.watch .notch,
+    .device.watch .home { display: none; }
+
+    .readout {
+      display: grid; gap: 6px; margin-top: 10px;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    }
+    .kv { font-size: 12px; color: var(--muted); }
+    .kv strong { color: var(--panel-ink); }
+
+    /* Code */
+    .code {
+      margin-top: 20px;
+      background: var(--code-bg);
+      color: var(--code-ink);
+      border-radius: 10px;
+      padding: 14px;
+      font-family: var(--mono);
+      font-size: 12px;
+      overflow: auto;
+      white-space: pre;
+    }
+
+    .section { margin-top: 28px; }
+    .section h3 { margin: 0 0 8px 0; font-size: 16px; }
+    .section p { margin: 0 0 8px 0; color: var(--muted); }
+    .tips { display: grid; gap: 10px; }
+    .tip { border-left: 3px solid var(--accent); background: #f8fafc; padding: 10px 12px; border-radius: 6px; }
+    .warn { border-left-color: var(--warn); }
+
+    .legend { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 6px; }
+    .legend span { font-size: 12px; color: var(--muted); }
+    .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; }
+    .dot-cap { background: #00000088; }
+    .dot-dev { background: #2f2f2f; }
+
+    /* New Features CSS */
+    .preview-controls {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 12px;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .btn-secondary, .btn-primary {
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      border: 1px solid var(--border);
+      background: #fff;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+    .btn-secondary:hover { background: #f8fafc; }
+    .btn-primary:hover { opacity: 0.9; }
+    
+    /* Grid Overlay */
+    .grid-overlay {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 20;
+    }
+    .grid-overlay.thirds {
+      background-image: 
+        linear-gradient(90deg, rgba(255,255,255,0.15) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(255,255,255,0.15) 1px, transparent 1px);
+      background-size: 33.333% 33.333%;
+      background-position: 0 0;
+    }
+    .grid-overlay.quarters {
+      background-image: 
+        linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(255,255,255,0.1) 1px, transparent 1px);
+      background-size: 25% 25%;
+      background-position: 0 0;
+    }
+    
+    /* Preset Selector */
+    .preset-row {
+      padding: 12px;
+      background: #f8fafc;
+      border-radius: 8px;
+      margin-bottom: 12px;
+    }
+    .preset-row label {
+      font-weight: 600;
+      color: var(--accent);
+      margin-bottom: 8px;
+      display: block;
+    }
+    
+    /* Watch with Bands */
+    .device.watch-with-bands {
+      display: flex;
+      flex-direction: column;
+      background: none;
+      padding: 0;
+      overflow: visible;
+      align-items: center;
+    }
+    .watch-band-top, .watch-band-bottom {
+      background: linear-gradient(180deg, #3a3a3a, #2a2a2a);
+      border-radius: 12px;
+      width: 35%;
+      position: relative;
+    }
+    .watch-band-top {
+      height: 50px;
+      margin-bottom: -8px;
+      z-index: 1;
+      border-bottom-left-radius: 6px;
+      border-bottom-right-radius: 6px;
+    }
+    .watch-band-bottom {
+      height: 50px;
+      margin-top: -8px;
+      z-index: 1;
+      border-top-left-radius: 6px;
+      border-top-right-radius: 6px;
+    }
+    .watch-face {
+      width: 100%;
+      aspect-ratio: 410 / 502;
+      background: #111;
+      border-radius: 32px;
+      border: 4px solid #2f2f2f;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 8px;
+      z-index: 2;
+      position: relative;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    }
+    .watch-face .screen {
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(180deg, #0ea5e9, #7c3aed);
+      border-radius: 24px;
+    }
+    
+    /* Toast notification */
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: var(--accent);
+      color: white;
+      padding: 12px 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      opacity: 0;
+      transform: translateY(20px);
+      transition: all 0.3s;
+      z-index: 1000;
+    }
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>AppShot Style System Guide</h1>
+      <p>Interactive visualization for framePosition, frameScale, partialFrame, and caption placement. Values and JSON mirror the live configuration keys.</p>
+    </header>
+
+    <div class="grid">
+      <!-- Controls -->
+      <section class="controls" aria-label="controls">
+        <h2>Controls</h2>
+        <div class="rows">
+          <!-- Preset Selector -->
+          <div class="preset-row">
+            <label for="presetSelect">Quick Presets</label>
+            <select id="presetSelect">
+              <option value="">Custom Configuration</option>
+              <option value="hero">Hero Shot - Large & Centered</option>
+              <option value="feature">Feature Focus - Overlay Text</option>
+              <option value="text">Text Heavy - More Caption Space</option>
+              <option value="minimal">Minimal - Clean & Simple</option>
+              <option value="appstore">App Store Recommended</option>
+            </select>
+          </div>
+          
+          <div class="row threecol">
+            <div>
+              <label for="deviceSelect">Device</label>
+              <select id="deviceSelect">
+                <option value="iphone">iPhone</option>
+                <option value="ipad">iPad</option>
+                <option value="mac">Mac</option>
+                <option value="watch">Watch</option>
+              </select>
+            </div>
+            <div>
+              <label for="captionPosition">Caption Position</label>
+              <select id="captionPosition">
+                <option value="above">above</option>
+                <option value="below">below</option>
+                <option value="overlay">overlay</option>
+              </select>
+            </div>
+            <div>
+              <label for="framePosition">framePosition (0=top, 50=center, 100=bottom)</label>
+              <div class="inline">
+                <input id="framePosition" type="range" min="0" max="100" value="50" step="1" />
+                <small><span id="framePositionVal">50</span>%</small>
+              </div>
+            </div>
+          </div>
+
+          <div class="row threecol">
+            <div>
+              <label for="frameScale">frameScale (0.2–2.0)</label>
+              <div class="inline">
+                <input id="frameScale" type="range" min="0.2" max="2.0" value="0.9" step="0.01" />
+                <small><span id="frameScaleVal">0.90</span>x</small>
+              </div>
+            </div>
+            <div>
+              <label>partialFrame</label>
+              <div class="opts">
+                <label class="chip"><input id="partialFrame" type="checkbox" /> enable</label>
+              </div>
+            </div>
+            <div>
+              <label for="frameOffset">frameOffset (10–50)</label>
+              <div class="inline">
+                <input id="frameOffset" type="range" min="10" max="50" value="25" step="1" />
+                <small><span id="frameOffsetVal">25</span>%</small>
+              </div>
+            </div>
+          </div>
+
+          <div class="row">
+            <label for="frameOpacity">Frame Opacity (see gradient through)</label>
+            <div class="inline">
+              <input id="frameOpacity" type="range" min="0.3" max="1" value="1" step="0.05" />
+              <small><span id="frameOpacityVal">1.00</span></small>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="twocol">
+              <div>
+                <label for="captionSize">caption.fontsize (px)</label>
+                <input id="captionSize" type="number" min="12" max="120" value="48" />
+              </div>
+              <div>
+                <label for="lineHeight">caption.box.lineHeight</label>
+                <div class="inline">
+                  <input id="lineHeight" type="range" min="1.2" max="1.8" step="0.1" value="1.4" />
+                  <small><span id="lineHeightVal">1.4</span></small>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="threecol">
+              <label class="chip"><input id="autoSize" type="checkbox" checked /> auto-size</label>
+              <div>
+                <label for="minHeight">minHeight (px)</label>
+                <input id="minHeight" type="number" min="0" max="2000" value="100" />
+              </div>
+              <div>
+                <label for="maxHeight">maxHeight (px)</label>
+                <input id="maxHeight" type="number" min="0" max="4000" value="500" />
+              </div>
+            </div>
+            <div class="row">
+              <label for="maxLines">maxLines</label>
+              <input id="maxLines" type="number" min="1" max="10" value="3" />
+            </div>
+          </div>
+
+          <div class="row threecol">
+            <div>
+              <label for="marginTop">marginTop (px)</label>
+              <input id="marginTop" type="number" min="0" max="400" value="0" />
+            </div>
+            <div>
+              <label for="marginBottom">marginBottom (px)</label>
+              <input id="marginBottom" type="number" min="0" max="400" value="0" />
+            </div>
+            <div>
+              <label for="frameMeta">frame meta</label>
+              <select id="frameMeta">
+                <option value="auto" selected>auto (typical)</option>
+                <option value="iphone-16pm">iPhone 16 Pro Max 1470×3000</option>
+                <option value="ipad-13">iPad 13 2048×2732</option>
+                <option value="mac-16-10">Mac 2880×1800</option>
+                <option value="watch-ultra">Watch 410×502</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="row">
+            <h3 style="font-size:13px;margin:6px 0;color:var(--muted);">Caption Background</h3>
+            <div class="threecol">
+              <label class="chip"><input id="bgEnable" type="checkbox" /> enable</label>
+              <div>
+                <label for="bgColor">color</label>
+                <input id="bgColor" type="color" value="#000000" />
+              </div>
+              <div>
+                <label for="bgOpacity">opacity</label>
+                <div class="inline">
+                  <input id="bgOpacity" type="range" min="0" max="1" step="0.05" value="0.6" />
+                  <small><span id="bgOpacityVal">0.60</span></small>
+                </div>
+              </div>
+            </div>
+            <div class="row">
+              <label for="bgPadding">padding</label>
+              <div class="inline">
+                <input id="bgPadding" type="range" min="0" max="50" step="1" value="16" />
+                <small><span id="bgPaddingVal">16</span>px</small>
+              </div>
+            </div>
+            <div class="row">
+              <label for="bgSideMargin">sideMargin</label>
+              <div class="inline">
+                <input id="bgSideMargin" type="range" min="0" max="60" step="1" value="20" />
+                <small><span id="bgSideMarginVal">20</span>px</small>
+              </div>
+            </div>
+          </div>
+
+          <div class="row">
+            <h3 style="font-size:13px;margin:6px 0;color:var(--muted);">Caption Border</h3>
+            <div class="threecol">
+              <label class="chip"><input id="bdEnable" type="checkbox" /> enable</label>
+              <div>
+                <label for="bdColor">color</label>
+                <input id="bdColor" type="color" value="#FFFFFF" />
+              </div>
+              <div>
+                <label for="bdWidth">width</label>
+                <div class="inline">
+                  <input id="bdWidth" type="range" min="1" max="10" step="1" value="2" />
+                  <small><span id="bdWidthVal">2</span>px</small>
+                </div>
+              </div>
+            </div>
+            <div class="row">
+              <label for="bdRadius">radius</label>
+              <div class="inline">
+                <input id="bdRadius" type="range" min="0" max="30" step="1" value="12" />
+                <small><span id="bdRadiusVal">12</span>px</small>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <label for="valign">verticalAlign</label>
+            <select id="valign">
+              <option value="center" selected>center</option>
+              <option value="top">top</option>
+            </select>
+          </div>
+
+          <div class="row">
+            <label for="captionText">Caption Text</label>
+            <textarea id="captionText">Your best features, clearly explained and beautifully framed.</textarea>
+          </div>
+        </div>
+      </section>
+
+      <!-- Preview -->
+      <section class="preview" aria-label="preview">
+        <div class="canvas-wrap">
+          <div class="preview-controls">
+            <div>
+              <button id="toggleGrid" class="btn-secondary">Show Grid</button>
+              <select id="gridType" style="margin-left: 8px; padding: 4px 8px; border-radius: 4px; border: 1px solid var(--border);">
+                <option value="thirds">Thirds</option>
+                <option value="quarters">Quarters</option>
+              </select>
+            </div>
+            <button id="exportConfig" class="btn-primary">Export Full Config</button>
+          </div>
+          <div class="canvas-label">Preview (exact compositor formulas)</div>
+          <div class="canvas-meta" id="canvasMeta">Resolution: 1290×2796 (portrait)</div>
+          <div class="canvas-container">
+            <div id="canvas" class="canvas">
+              <div id="captionArea" class="caption-area"><div id="captionBox" class="caption-box">CAPTION</div></div>
+              <div id="captionOverlay" class="caption-overlay" style="display:none;">OVERLAY CAPTION</div>
+              <div id="devicePreview" class="device">
+                <div class="watch-band-top"></div>
+                <div class="device-body">
+                  <div class="notch"></div>
+                  <div class="screen"></div>
+                  <div class="home"></div>
+                  <div class="crown"></div>
+                  <div class="side-button"></div>
+                </div>
+                <div class="watch-band-bottom"></div>
+              </div>
+              <div id="gridOverlay" class="grid-overlay" style="display:none;"></div>
+            </div>
+          </div>
+
+          <div class="legend">
+            <span><span class="dot dot-cap"></span>Caption area</span>
+            <span><span class="dot dot-dev"></span>Device frame</span>
+          </div>
+
+          <div class="readout">
+            <div class="kv">deviceTop: <strong><span id="read_deviceTop">—</span> px</strong></div>
+            <div class="kv">deviceHeight: <strong><span id="read_deviceHeight">—</span> px</strong></div>
+            <div class="kv">captionHeight: <strong><span id="read_captionHeight">—</span> px</strong> (<span id="read_lines">—</span> lines)</div>
+            <div class="kv">availableSpace (calc): <strong><span id="read_space">—</span> px</strong></div>
+          </div>
+
+          <div class="code" id="jsonOut"></div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Reference -->
+    <section class="section">
+      <h3>Positioning Formulas</h3>
+      <div class="tips">
+        <div class="tip">
+          <strong>above</strong>: deviceTop = captionHeight + (canvasHeight − captionHeight − deviceHeight) × framePosition/100
+        </div>
+        <div class="tip">
+          <strong>below</strong>: deviceTop = (canvasHeight − captionHeight − deviceHeight) × framePosition/100
+        </div>
+        <div class="tip">
+          <strong>overlay</strong>: deviceTop = (canvasHeight − deviceHeight) × framePosition/100
+        </div>
+        <div class="tip warn">
+          <strong>Synonyms</strong>: framePosition accepts 'top'(0), 'center'(50), 'bottom'(100), or 0–100.
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h3>Keys and Ranges</h3>
+      <p>These match the live configuration shape:</p>
+      <div class="tips">
+        <div class="tip">devices.&lt;name&gt;.framePosition: 'top' | 'center' | 'bottom' | 0–100</div>
+        <div class="tip">devices.&lt;name&gt;.frameScale: 0.5–2.0 (multiplier). Defaults: mac≈0.95, others≈0.9</div>
+        <div class="tip">devices.&lt;name&gt;.partialFrame: boolean; devices.&lt;name&gt;.frameOffset: 10–50 (bottom cut)</div>
+        <div class="tip">caption.position: 'above' | 'below' | 'overlay' (device override: devices.&lt;name&gt;.captionPosition)</div>
+        <div class="tip">caption.fontsize (px), caption.background{color,opacity,padding}, caption.border{color,width,radius}</div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h3>Notes</h3>
+      <div class="tips">
+        <div class="tip">This preview uses the same placement formulas as the compositor. Caption height is estimated via simple word wrapping consistent with average character width; exact wrapping may differ slightly from your chosen font.</div>
+        <div class="tip">Partial frame uses a hard crop (bottom cut), not a fade. If you like the fade look, consider it conceptual only for now.</div>
+        <div class="tip">Watch layouts use smaller fonts in the compositor; this preview focuses on general behavior.</div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="toast">Config copied to clipboard!</div>
+
+  <script>
+    // Apply theme=appshot|dark via query param for in-site embedding
+    (function() {
+      try {
+        const theme = new URLSearchParams(location.search).get('theme');
+        if (theme === 'appshot' || theme === 'dark') {
+          document.documentElement.classList.add('theme-appshot');
+          document.body.classList.add('theme-appshot');
+        }
+      } catch (e) {}
+    })();
+    // Config-like constants mirrored from src/core/text-utils.ts
+    const CHAR_WIDTH_FACTOR_NORMAL = 0.65; // average character width vs font size
+    const CHAR_WIDTH_FACTOR_NARROW = 0.5;  // narrower factor for small widths (watch)
+    const PAD_LEFT_RIGHT = 40;             // default internal padding in text calc
+    const PAD_LEFT_RIGHT_NARROW = 30;      // smaller internal padding for watch-like widths
+    const NARROW_WIDTH_THRESHOLD = 500;    // treat widths < 500px as "watch/narrow"
+
+    // Preset Configurations
+    const PRESETS = {
+      hero: {
+        name: 'Hero Shot',
+        config: {
+          frameScale: 1.1, // Default, will be overridden per device
+          framePosition: 50,
+          captionPosition: 'below',
+          captionSize: 48,
+          autoSize: true,
+          bgOpacity: 0.3,
+          bgPadding: 16,
+          bdEnable: false,
+          // Device-specific frame scales for optimal fit
+          deviceScales: {
+            iphone: 1.05,  // Slightly reduced from 1.1 for better fit
+            ipad: 0.95,
+            mac: 1.0,
+            watch: 1.05  // Larger watch for visibility
+          },
+          // Watch-specific overrides
+          watchOverrides: {
+            captionPosition: 'overlay',  // Overlay for hero shot
+            framePosition: 50,  // Centered for hero
+            captionSize: 28,  // Smaller for watch
+            minHeight: 40,
+            maxHeight: 50,
+            sideMargin: 10  // Wider caption box on watch
+          },
+          marginTop: 20,
+          marginBottom: 40
+        }
+      },
+      feature: {
+        name: 'Feature Focus',
+        config: {
+          frameScale: 0.85,
+          framePosition: 65,
+          captionPosition: 'overlay',
+          captionSize: 64,
+          autoSize: true,
+          bgOpacity: 0.7,
+          bgPadding: 16,
+          bdEnable: false,
+          // Device-specific scales
+          deviceScales: {
+            iphone: 0.85,
+            ipad: 0.85,
+            mac: 0.85,
+            watch: 1.0   // Larger watch; overlay caption leaves space
+          },
+          // Watch-specific overrides for feature focus
+          watchOverrides: {
+            captionPosition: 'overlay',  // Overlay for feature focus
+            framePosition: 60,
+            captionSize: 26,  // Smaller for watch
+            minHeight: 40,
+            maxHeight: 50,
+            sideMargin: 10
+          },
+          marginTop: 28,
+          marginBottom: 56
+        }
+      },
+      text: {
+        name: 'Text Heavy',
+        config: {
+          frameScale: 0.75,
+          framePosition: 25,  // Much closer to caption for better balance
+          captionPosition: 'above',
+          captionSize: 72,
+          autoSize: false,
+          minHeight: 400,
+          maxHeight: 400,
+          bgOpacity: 0.8,
+          bgPadding: 24,
+          bdEnable: true,
+          bdWidth: 2,
+          bdRadius: 16,
+          // Device-specific scales
+          deviceScales: {
+            iphone: 0.75,
+            ipad: 0.75,
+            mac: 0.75,
+            watch: 0.9   // Bigger watch; still plenty of caption space
+          },
+          // Watch-specific overrides for text heavy
+          watchOverrides: {
+            captionPosition: 'above',  // Use above position for text-heavy
+            framePosition: 30,  // Close to caption like other devices
+            captionSize: 32,  // Slightly larger for better readability
+            minHeight: 60,
+            maxHeight: 90,  // More height for text
+            autoSize: true,
+            sideMargin: 5,  // Very small margin for wide caption
+            marginTop: 10,  // Compact spacing
+            marginBottom: 20,
+            bgPadding: 10,  // Reduced padding for more text width
+            frameScale: 0.9   // Explicit scale for larger watch
+          },
+          marginTop: 40,
+          marginBottom: 60
+        }
+      },
+      minimal: {
+        name: 'Minimal',
+        config: {
+          frameScale: 0.9,
+          framePosition: 50,
+          captionPosition: 'below',
+          captionSize: 56,
+          autoSize: true,
+          minHeight: 100,
+          maxHeight: 200,
+          bgEnable: false,
+          bdEnable: false,
+          // Device-specific scales
+          deviceScales: {
+            iphone: 0.9,
+            ipad: 0.9,
+            mac: 0.9,
+            watch: 0.95  // Larger minimal watch
+          },
+          // Watch-specific overrides
+          watchOverrides: {
+            captionPosition: 'overlay',  // Overlay for minimal design
+            framePosition: 45,  // Slightly higher
+            captionSize: 24,  // Very small for minimal
+            minHeight: 30,
+            maxHeight: 40,
+            sideMargin: 10
+          },
+          marginTop: 20,
+          marginBottom: 40
+        }
+      },
+      appstore: {
+        name: 'App Store Recommended',
+        config: {
+          frameScale: 0.9,
+          framePosition: 50,
+          captionPosition: 'above',
+          captionSize: 48,
+          autoSize: true,
+          minHeight: 100,
+          maxHeight: 280,
+          bgEnable: true,
+          bgOpacity: 0.6,
+          bgPadding: 16,
+          bdEnable: false,
+          bdRadius: 12,
+          // Device-specific scales
+          deviceScales: {
+            iphone: 0.9,
+            ipad: 0.9,
+            mac: 0.9,
+            watch: 1.1   // Large for App Store style
+          },
+          // Watch-specific overrides for App Store
+          watchOverrides: {
+            captionPosition: 'above',  // Above like App Store examples
+            framePosition: 90,  // Very low to avoid overlap
+            captionSize: 28,
+            minHeight: 45,
+            maxHeight: 55,
+            bgOpacity: 0.7
+            ,sideMargin: 10
+          },
+          marginTop: 0,
+          marginBottom: 0
+        }
+      }
+    };
+
+    function escapeHtml(s) {
+      return s
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    const els = {
+      deviceSelect: document.getElementById('deviceSelect'),
+      captionPosition: document.getElementById('captionPosition'),
+      framePosition: document.getElementById('framePosition'),
+      framePositionVal: document.getElementById('framePositionVal'),
+      frameScale: document.getElementById('frameScale'),
+      frameScaleVal: document.getElementById('frameScaleVal'),
+      partialFrame: document.getElementById('partialFrame'),
+      frameOffset: document.getElementById('frameOffset'),
+      frameOffsetVal: document.getElementById('frameOffsetVal'),
+      frameOpacity: document.getElementById('frameOpacity'),
+      frameOpacityVal: document.getElementById('frameOpacityVal'),
+      presetSelect: document.getElementById('presetSelect'),
+      toggleGrid: document.getElementById('toggleGrid'),
+      gridType: document.getElementById('gridType'),
+      gridOverlay: document.getElementById('gridOverlay'),
+      exportConfig: document.getElementById('exportConfig'),
+      toast: document.getElementById('toast'),
+      captionSize: document.getElementById('captionSize'),
+      lineHeight: document.getElementById('lineHeight'),
+      lineHeightVal: document.getElementById('lineHeightVal'),
+      autoSize: document.getElementById('autoSize'),
+      minHeight: document.getElementById('minHeight'),
+      maxHeight: document.getElementById('maxHeight'),
+      maxLines: document.getElementById('maxLines'),
+      captionText: document.getElementById('captionText'),
+      canvas: document.getElementById('canvas'),
+      canvasScaler: document.getElementById('canvasScaler'),
+      captionArea: document.getElementById('captionArea'),
+      captionBox: document.getElementById('captionBox'),
+      captionOverlay: document.getElementById('captionOverlay'),
+      marginTop: document.getElementById('marginTop'),
+      marginBottom: document.getElementById('marginBottom'),
+      frameMeta: document.getElementById('frameMeta'),
+      bgSideMargin: document.getElementById('bgSideMargin'),
+      bgSideMarginVal: document.getElementById('bgSideMarginVal'),
+      valign: document.getElementById('valign'),
+      device: document.getElementById('devicePreview'),
+      read_deviceTop: document.getElementById('read_deviceTop'),
+      read_deviceHeight: document.getElementById('read_deviceHeight'),
+      read_captionHeight: document.getElementById('read_captionHeight'),
+      read_lines: document.getElementById('read_lines'),
+      read_space: document.getElementById('read_space'),
+      jsonOut: document.getElementById('jsonOut'),
+      // Background/border controls
+      bgEnable: document.getElementById('bgEnable'),
+      bgColor: document.getElementById('bgColor'),
+      bgOpacity: document.getElementById('bgOpacity'),
+      bgOpacityVal: document.getElementById('bgOpacityVal'),
+      bgPadding: document.getElementById('bgPadding'),
+      bgPaddingVal: document.getElementById('bgPaddingVal'),
+      bdEnable: document.getElementById('bdEnable'),
+      bdColor: document.getElementById('bdColor'),
+      bdWidth: document.getElementById('bdWidth'),
+      bdWidthVal: document.getElementById('bdWidthVal'),
+      bdRadius: document.getElementById('bdRadius'),
+      bdRadiusVal: document.getElementById('bdRadiusVal')
+    };
+
+    function clamp(n, min, max) { return Math.max(min, Math.min(max, n)); }
+
+    function defaultScaleFor(device) {
+      switch (device) {
+        case 'mac': return 0.95;
+        case 'ipad': return 0.9;
+        case 'watch': return 0.9;
+        default: return 0.9; // iphone
+      }
+    }
+
+    function baseHeightRatio(device) {
+      // Rough relative device occupancy on canvas
+      switch (device) {
+        case 'mac': return 0.42;
+        case 'ipad': return 0.40;
+        case 'watch': return 0.28;
+        default: return 0.35; // iphone
+      }
+    }
+
+    function aspectRatioFor(device) {
+      switch (device) {
+        case 'mac': return '16 / 10';
+        case 'ipad': return '3 / 4';
+        case 'watch': return '1 / 1';
+        default: return '9 / 19.5'; // iphone
+      }
+    }
+
+    function canvasResolution(device) {
+      // Mirror App Store presets (portrait for phone/ipad/watch, landscape for mac)
+      switch (device) {
+        case 'iphone': return { w: 1290, h: 2796, orientation: 'portrait' };
+        case 'ipad':   return { w: 2064, h: 2752, orientation: 'portrait' };
+        case 'mac':    return { w: 2880, h: 1800, orientation: 'landscape' };
+        case 'watch':  return { w: 410,  h: 502,  orientation: 'portrait' };
+        default:       return { w: 1290, h: 2796, orientation: 'portrait' };
+      }
+    }
+
+    function frameMetadata(device, choice) {
+      // Typical frame image pixel sizes used inside Appshot's frames
+      if (choice && choice !== 'auto') {
+        switch (choice) {
+          case 'iphone-16pm': return { w: 1470, h: 3000 };
+          case 'ipad-13': return { w: 2048, h: 2732 };
+          case 'mac-16-10': return { w: 2880, h: 1800 };
+          case 'watch-ultra': return { w: 410, h: 502 };
+        }
+      }
+      switch (device) {
+        case 'iphone': return { w: 1470, h: 3000 };
+        case 'ipad': return { w: 2048, h: 2732 };
+        case 'mac': return { w: 2880, h: 1800 };
+        case 'watch': return { w: 410, h: 502 };
+        default: return { w: 1470, h: 3000 };
+      }
+    }
+
+    function canvasMaxWidth(device) {
+      // Keep preview heights manageable per device
+      switch (device) {
+        case 'iphone': return 460;   // ~height 998px
+        case 'ipad':   return 560;   // ~height 747px
+        case 'mac':    return 820;   // ~height 512px
+        case 'watch':  return 420;   // ~height 512px
+        default:       return 460;
+      }
+    }
+
+    function wrapText(text, maxWidthPx, fontSize, maxLines = 3) {
+      if (!text) return [];
+      // Mirror src/core/text-utils behavior for watch/narrow layouts
+      const isNarrow = maxWidthPx < NARROW_WIDTH_THRESHOLD;
+      const avgCharWidth = fontSize * (isNarrow ? CHAR_WIDTH_FACTOR_NARROW : CHAR_WIDTH_FACTOR_NORMAL);
+      const sidePad = isNarrow ? PAD_LEFT_RIGHT_NARROW : PAD_LEFT_RIGHT;
+      const usable = Math.max(10, maxWidthPx - 2 * sidePad);
+      const charsPerLine = Math.max(8, Math.floor(usable / avgCharWidth));
+      const words = text.split(/\s+/);
+      const out = [];
+      let line = '';
+      for (let i = 0; i < words.length; i++) {
+        const w = words[i];
+        const test = line ? line + ' ' + w : w;
+        if (test.length <= charsPerLine) {
+          line = test;
+        } else {
+          if (line) out.push(line);
+          line = w;
+          if (out.length >= maxLines - 1) {
+            const rem = words.slice(i).join(' ');
+            const trunc = rem.length > charsPerLine ? rem.slice(0, Math.max(0, charsPerLine - 3)) + '...' : rem;
+            out.push(trunc);
+            return out;
+          }
+        }
+      }
+      if (line && out.length < maxLines) out.push(line);
+      return out;
+    }
+
+    function calculateCaptionHeight(text, fontSize, canvasWidth, opts = {}) {
+      const { lineHeight = 1.4, paddingTop = 40, paddingBottom = 40, minHeight = 100, maxHeight = 500, maxLines = 3 } = opts;
+      const lines = wrapText(text, canvasWidth, fontSize, maxLines);
+      const textH = lines.length * fontSize * lineHeight;
+      const total = paddingTop + textH + paddingBottom;
+      const height = Math.max(minHeight, Math.min(maxHeight, total));
+      return { height: Math.ceil(height), lines };
+    }
+
+    function calculateAdaptiveCaptionHeight(text, fontSize, canvasWidth, canvasHeight, deviceTop, deviceHeight, framePosition, lineHeight = 1.4, minHeight = 100, maxHeightPref = undefined, maxLinesPref = undefined) {
+      let availableSpace;
+      if (framePosition === 0) {
+        availableSpace = canvasHeight * 0.15;
+      } else if (framePosition === 100) {
+        availableSpace = Math.max(deviceTop - 20, canvasHeight * 0.5);
+      } else if (typeof framePosition === 'number') {
+        availableSpace = deviceTop - 20;
+      } else {
+        if (deviceTop > canvasHeight * 0.3) availableSpace = deviceTop - 20; else availableSpace = canvasHeight * 0.25;
+      }
+      const maxLines = (typeof maxLinesPref === 'number') ? maxLinesPref : Math.max(1, Math.floor(availableSpace / (fontSize * lineHeight)));
+      const maxHeight = (typeof maxHeightPref === 'number') ? Math.min(maxHeightPref, availableSpace) : availableSpace;
+      return calculateCaptionHeight(text, fontSize, canvasWidth, {
+        lineHeight,
+        minHeight: Math.max(fontSize * 2, minHeight),
+        maxHeight,
+        maxLines
+      });
+    }
+
+    function buildJson(deviceKey, state) {
+      const dev = {};
+      // Only include keys that differ from defaults or are meaningful
+      if (state.framePositionKind === 'keyword') dev.framePosition = state.framePositionKeyword;
+      else dev.framePosition = state.framePositionNum;
+
+      if (Math.abs(state.frameScale - defaultScaleFor(deviceKey)) > 0.0001) {
+        dev.frameScale = +state.frameScale.toFixed(2);
+      }
+      if (state.partialFrame) {
+        dev.partialFrame = true;
+        dev.frameOffset = state.frameOffset;
+      }
+      dev.captionPosition = state.captionPosition;
+      dev.captionSize = state.captionSize;
+      dev.captionBox = { lineHeight: state.lineHeight };
+
+      const caption = {
+        fontsize: state.captionSize,
+        position: state.captionPosition
+      };
+      caption.box = {
+        autoSize: state.autoSize,
+        maxLines: state.maxLines,
+        lineHeight: state.lineHeight,
+        minHeight: state.minHeight,
+        maxHeight: state.maxHeight,
+        verticalAlign: state.verticalAlign,
+        marginTop: state.marginTop,
+        marginBottom: state.marginBottom
+      };
+      if (state.bgEnable) {
+        caption.background = {
+          color: state.bgColor,
+          opacity: state.bgOpacity,
+          padding: state.bgPadding,
+          sideMargin: state.bgSideMargin
+        };
+      }
+      // Border config: include radius even if border disabled, so background can use it
+      if (state.bdEnable || typeof state.bdRadius === 'number') {
+        caption.border = {};
+        if (state.bdEnable) {
+          caption.border.color = state.bdColor;
+          caption.border.width = state.bdWidth;
+        }
+        caption.border.radius = state.bdRadius;
+      }
+
+      const out = {
+        caption,
+        devices: { [deviceKey]: dev }
+      };
+      return JSON.stringify(out, null, 2);
+    }
+
+    function buildFullJson(state) {
+      // Build complete config with all devices and defaults
+      const fullConfig = {
+        output: "./final",
+        frames: "./frames",
+        background: {
+          mode: "gradient",
+          gradient: {
+            colors: ["#4a90e2", "#7b68ee"],
+            direction: "top-bottom"
+          }
+        },
+        caption: {
+          font: "SF Pro Display",
+          fontsize: state.captionSize,
+          color: "#FFFFFF",
+          align: "center",
+          position: state.captionPosition,
+          paddingTop: 40,
+          paddingBottom: 40,
+          box: {
+            autoSize: state.autoSize,
+            maxLines: state.maxLines,
+            lineHeight: state.lineHeight,
+            minHeight: state.minHeight,
+            maxHeight: state.maxHeight,
+            verticalAlign: state.verticalAlign,
+            marginTop: state.marginTop,
+            marginBottom: state.marginBottom
+          }
+        },
+        devices: {}
+      };
+
+      // Add background if enabled
+      if (state.bgEnable) {
+        fullConfig.caption.background = {
+          color: state.bgColor,
+          opacity: state.bgOpacity,
+          padding: state.bgPadding,
+          sideMargin: state.bgSideMargin
+        };
+      }
+
+      // Add border if enabled
+      if (state.bdEnable || typeof state.bdRadius === 'number') {
+        fullConfig.caption.border = {};
+        if (state.bdEnable) {
+          fullConfig.caption.border.color = state.bdColor;
+          fullConfig.caption.border.width = state.bdWidth;
+        }
+        fullConfig.caption.border.radius = state.bdRadius;
+      }
+
+      // Add device configurations for all device types
+      const devices = ['iphone', 'ipad', 'mac', 'watch'];
+      for (const device of devices) {
+        const deviceConfig = {
+          input: `./screenshots/${device}`,
+          resolution: device === 'iphone' ? '1290x2796' : 
+                      device === 'ipad' ? '2048x2732' :
+                      device === 'mac' ? '2880x1800' : '410x502',
+          autoFrame: true,
+          framePosition: state.framePositionKind === 'keyword' ? state.framePositionKeyword : state.framePositionNum,
+          frameScale: state.frameScale
+        };
+        
+        // Add device-specific caption settings if different from global
+        if (state.captionPosition !== (fullConfig.caption.position || 'above')) {
+          deviceConfig.captionPosition = state.captionPosition;
+        }
+        if (state.captionFontSize !== fullConfig.caption.fontsize) {
+          deviceConfig.captionSize = state.captionFontSize;
+        }
+        
+        // Add device-specific caption background if opacity differs
+        if (state.bgEnable && state.bgOpacity !== (fullConfig.caption.background?.opacity || 0.6)) {
+          deviceConfig.captionBackground = { opacity: state.bgOpacity };
+        }
+        
+        if (state.partialFrame) {
+          deviceConfig.partialFrame = true;
+          deviceConfig.frameOffset = state.frameOffset;
+        }
+        
+        fullConfig.devices[device] = deviceConfig;
+      }
+
+      return JSON.stringify(fullConfig, null, 2);
+    }
+
+    function update() {
+      const deviceKey = els.deviceSelect.value;
+      const captionPosition = els.captionPosition.value; // above|below|overlay
+
+      const framePosVal = parseInt(els.framePosition.value, 10);
+      els.framePositionVal.textContent = String(framePosVal);
+
+      let framePositionKind = 'number';
+      let framePositionKeyword = null;
+      // Display synonyms for neatness
+      if (framePosVal === 0) { framePositionKind = 'keyword'; framePositionKeyword = 'top'; }
+      else if (framePosVal === 50) { framePositionKind = 'keyword'; framePositionKeyword = 'center'; }
+      else if (framePosVal === 100) { framePositionKind = 'keyword'; framePositionKeyword = 'bottom'; }
+
+      let frameScale = parseFloat(els.frameScale.value);
+      els.frameScaleVal.textContent = frameScale.toFixed(2);
+
+      const partialFrame = els.partialFrame.checked;
+      const frameOffset = parseInt(els.frameOffset.value, 10);
+      els.frameOffset.disabled = !partialFrame;
+      els.frameOffsetVal.textContent = String(frameOffset);
+
+      const frameOpacity = parseFloat(els.frameOpacity.value);
+      els.frameOpacityVal.textContent = frameOpacity.toFixed(2);
+
+      const captionSize = parseInt(els.captionSize.value, 10) || 48;
+      const lineHeight = parseFloat(els.lineHeight.value);
+      els.lineHeightVal.textContent = String(lineHeight);
+      const captionText = els.captionText.value || '';
+
+      // Read background controls early so wrap width is valid
+      const bgEnabled = els.bgEnable.checked;
+      const bgColorHex = els.bgColor.value || '#000000';
+      const bgOpacity = parseFloat(els.bgOpacity.value || '0.8');
+      const bgPadding = parseInt(els.bgPadding.value || '20', 10);
+      const sideMargin = parseInt(els.bgSideMargin.value || '30', 10);
+      
+      // Read margins
+      const mt = parseInt(els.marginTop.value || '0', 10);
+      const mb = parseInt(els.marginBottom.value || '0', 10);
+
+      // Set canvas aspect ratio based on device
+      const res = canvasResolution(deviceKey);
+      const aspectRatio = res.w + ' / ' + res.h;
+      els.canvas.style.aspectRatio = aspectRatio;
+      
+      // Resolution label
+      const meta = document.getElementById('canvasMeta');
+      meta.textContent = `Resolution: ${res.w}×${res.h} (${res.orientation})`;
+      
+      // Use actual resolution for calculations (not DOM size)
+      const canvasW = res.w;
+      const canvasH = res.h;
+      // Pre-calculate device dimensions using exact composer logic
+      const frameMeta = frameMetadata(deviceKey, els.frameMeta.value);
+      const originalFrameWidth = frameMeta.w;
+      const originalFrameHeight = frameMeta.h;
+      
+      // Calculate scale exactly as compose.ts does
+      let availableHeight;
+      if (captionPosition === 'above') {
+        availableHeight = Math.max(100, canvasH - 100); // Temporary estimate
+      } else if (captionPosition === 'below') {
+        availableHeight = Math.max(100, canvasH - 100);
+      } else {
+        availableHeight = canvasH - mb;
+      }
+      
+      // Initial scale calculation for device dimensions
+      const initialScaleX = canvasW / originalFrameWidth;
+      const initialScaleY = availableHeight / originalFrameHeight;
+      
+      // Calculate base scale based on device type
+      let baseScale;
+      if (deviceKey === 'watch') {
+        // Match compositor default scaling more closely
+        baseScale = 0.9; // Watch default scale in core
+      } else if (deviceKey === 'mac') {
+        baseScale = 0.95; // Mac default scale
+      } else {
+        baseScale = 0.9; // iPhone/iPad default scale
+      }
+      
+      // Apply scale: mimic compose.ts semantics
+      // - If an explicit frameScale is set (user or preset), don't multiply by baseScale
+      // - Otherwise use device default baseScale
+      const hasExplicitScale = !!els.frameScale.dataset.user;
+      const baseFit = Math.min(initialScaleX, initialScaleY);
+      const deviceScale = hasExplicitScale ? (baseFit * frameScale) : (baseFit * baseScale);
+      
+      let targetDeviceWidth = Math.floor(originalFrameWidth * deviceScale);
+      let targetDeviceHeight = Math.floor(originalFrameHeight * deviceScale);
+      
+      // Apply partial frame if enabled
+      if (partialFrame) {
+        const cropHeight = Math.floor(originalFrameHeight * (1 - frameOffset / 100));
+        targetDeviceHeight = Math.floor(cropHeight * deviceScale);
+      }
+      
+      // Content width for wrapping (side margins and padding when background is visible)
+      const contentWidth = Math.max(50, canvasW - (sideMargin * 2) - (bgEnabled ? bgPadding * 2 : 0));
+
+      // Calculate preliminary device position for caption height calculation
+      let prelimDeviceTop = 0;
+      if (typeof framePosVal === 'number') {
+        const prelimAvailable = canvasH - targetDeviceHeight;
+        prelimDeviceTop = Math.floor(prelimAvailable * (framePosVal / 100));
+      } else if (framePosVal === 0) {
+        prelimDeviceTop = 100; // Temporary
+      } else if (framePosVal === 100) {
+        prelimDeviceTop = canvasH - targetDeviceHeight;
+      } else {
+        prelimDeviceTop = Math.floor((canvasH - targetDeviceHeight) / 2);
+      }
+
+      let captionHeight, lines;
+      if ((captionPosition === 'above' || captionPosition === 'below') && deviceKey === 'watch' && captionText.trim()) {
+        // Watch special case: fixed ~1/3 of canvas height and smaller font
+        captionHeight = Math.floor(canvasH / 3);
+        lines = wrapText(captionText, contentWidth, Math.min(36, captionSize), 3);
+      } else if (captionPosition === 'above' || captionPosition === 'below') {
+        const useAuto = els.autoSize.checked;
+        const userMinH = parseInt(els.minHeight.value || '100', 10);
+        const userMaxH = parseInt(els.maxHeight.value || '500', 10);
+        const userMaxLines = parseInt(els.maxLines.value || '3', 10);
+
+        if (useAuto) {
+          const result = calculateAdaptiveCaptionHeight(
+            captionText,
+            captionSize,
+            contentWidth,
+            canvasH,
+            prelimDeviceTop,
+            targetDeviceHeight,
+            framePosVal,
+            lineHeight,
+            userMinH,
+            userMaxH,
+            userMaxLines
+          );
+          captionHeight = result.height;
+          lines = result.lines;
+        } else {
+          // Fixed height behavior with wrapping to maxLines
+          const wrapped = wrapText(captionText, contentWidth, captionSize, userMaxLines);
+          lines = wrapped;
+          captionHeight = clamp(userMinH, 0, canvasH); // treat minHeight as fixed height
+        }
+      } else {
+        // overlay: no reserved caption area; still compute lines for overlay text sizing
+        lines = wrapText(captionText, contentWidth, captionSize, 2);
+        captionHeight = 0;
+      }
+
+      // Background/border configuration (values already read above)
+      const bdEnabled = els.bdEnable.checked;
+      els.bgOpacityVal.textContent = bgOpacity.toFixed(2);
+      els.bgPaddingVal.textContent = String(bgPadding);
+      els.bgSideMarginVal.textContent = String(sideMargin);
+      const bdColor = els.bdColor.value || '#FFFFFF';
+      const bdWidth = parseInt(els.bdWidth.value || '2', 10);
+      els.bdWidthVal.textContent = String(bdWidth);
+      const bdRadius = parseInt(els.bdRadius.value || '12', 10);
+      els.bdRadiusVal.textContent = String(bdRadius);
+
+      // Enable/disable inputs based on toggles
+      els.bgColor.disabled = !bgEnabled;
+      els.bgOpacity.disabled = !bgEnabled;
+      els.bgPadding.disabled = !bgEnabled;
+      // Border color/width depend on enable; radius stays active (applies to background, too)
+      els.bdColor.disabled = !bdEnabled;
+      els.bdWidth.disabled = !bdEnabled;
+      // Disable min/max height when auto-size is on (they are ignored)
+      const isAuto = els.autoSize.checked;
+      els.minHeight.disabled = isAuto;
+      els.maxHeight.disabled = isAuto;
+
+      function hexToRgba(hex, alpha) {
+        const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        if (!m) return `rgba(0,0,0,${alpha})`;
+        return `rgba(${parseInt(m[1],16)}, ${parseInt(m[2],16)}, ${parseInt(m[3],16)}, ${alpha})`;
+      }
+
+      // Compute deviceTop using exact composer formulas from compose.ts lines 704-820
+      const pct = framePosVal / 100;
+      let deviceTop = 0;
+      let availableSpace = 0;
+      
+      if (captionPosition === 'above') {
+        // From compose.ts lines 704-773
+        if (typeof framePosVal === 'number') {
+          availableSpace = canvasH - mt - captionHeight - mb - targetDeviceHeight;
+          
+          // Watch overlap mode fix (lines 714-730 in compose.ts)
+          if (availableSpace < 0 && deviceKey === 'watch') {
+            const totalAvailable = canvasH - mb - targetDeviceHeight;
+            deviceTop = Math.floor(totalAvailable * pct);
+          } else {
+            deviceTop = mt + captionHeight + Math.floor(availableSpace * pct);
+          }
+        } else if (framePosVal === 0) { // 'top'
+          deviceTop = mt + captionHeight;
+        } else if (framePosVal === 100) { // 'bottom'
+          deviceTop = canvasH - mb - targetDeviceHeight;
+        } else { // 'center' (50)
+          const availableSpace2 = canvasH - mt - captionHeight - mb;
+          deviceTop = mt + captionHeight + Math.floor((availableSpace2 - targetDeviceHeight) / 2);
+        }
+        
+        // Clamp to bounds (lines 762-773)
+        if (deviceKey === 'watch' && typeof framePosVal === 'number' && availableSpace < 0) {
+          deviceTop = Math.floor(Math.max(0, Math.min(deviceTop, canvasH - mb - targetDeviceHeight)));
+        } else {
+          deviceTop = Math.floor(Math.max(mt + captionHeight, Math.min(deviceTop, canvasH - mb - targetDeviceHeight)));
+        }
+        
+        // Show area
+        els.captionArea.style.display = 'flex';
+        const captionTopPercent = (mt / canvasH) * 100;
+        const captionHeightPercent = (captionHeight / canvasH) * 100;
+        els.captionArea.style.top = captionTopPercent + '%';
+        els.captionArea.style.height = captionHeightPercent + '%';
+        // Prepare inner box with responsive dimensions
+        const box = els.captionBox;
+        box.style.display = 'inline-block';
+        const fontSize = (deviceKey === 'watch') ? Math.min(36, captionSize) : captionSize;
+        // Calculate font size relative to container
+        const canvasEl = els.canvas.getBoundingClientRect();
+        const scaledFontSize = (fontSize / canvasH) * canvasEl.height;
+        box.style.fontSize = scaledFontSize + 'px'; // Use actual pixels based on scaled canvas
+        box.style.lineHeight = String(lineHeight);
+        // Background/border application
+        if (bgEnabled) {
+          box.style.background = hexToRgba(bgColorHex, bgOpacity);
+          const paddingPercent = (bgPadding / canvasW) * 100;
+          box.style.padding = `${paddingPercent}%`;
+          const widthPercent = ((canvasW - sideMargin * 2 - (bgPadding * 2)) / canvasW) * 100;
+          box.style.width = widthPercent + '%';
+        } else {
+          box.style.background = 'transparent';
+          box.style.padding = '0px';
+          box.style.width = 'auto';
+        }
+        box.style.borderRadius = `${bdRadius}px`;
+        if (bdEnabled) {
+          box.style.border = `${bdWidth}px solid ${bdColor}`;
+          box.style.borderRadius = `${bdRadius}px`;
+        } else {
+          box.style.border = 'none';
+        }
+        // Render multiline caption
+        const captionHtml = (lines && lines.length) ? lines.map(l => escapeHtml(l)).join('<br>') : (captionText ? escapeHtml(captionText) : 'CAPTION');
+        box.innerHTML = captionHtml;
+        els.captionOverlay.style.display = 'none';
+        // Vertical align inside caption area
+        if (els.valign.value === 'top') {
+          els.captionArea.style.justifyContent = 'flex-start';
+        } else {
+          els.captionArea.style.justifyContent = 'center';
+        }
+      } else if (captionPosition === 'below') {
+        // From compose.ts lines 775-797
+        const deviceAreaHeight = canvasH - captionHeight - mb;
+        
+        if (typeof framePosVal === 'number') {
+          availableSpace = deviceAreaHeight - targetDeviceHeight;
+          deviceTop = Math.floor(availableSpace * pct);
+        } else if (framePosVal === 0) { // 'top'
+          deviceTop = 0;
+        } else if (framePosVal === 100) { // 'bottom'
+          deviceTop = deviceAreaHeight - targetDeviceHeight;
+        } else { // 'center'
+          deviceTop = Math.floor((deviceAreaHeight - targetDeviceHeight) / 2);
+        }
+        
+        // Ensure device doesn't go off canvas or into caption area
+        deviceTop = Math.floor(Math.max(0, Math.min(deviceTop, deviceAreaHeight - targetDeviceHeight)));
+        
+        // Show area
+        els.captionArea.style.display = 'flex';
+        const bottomCaptionTop = canvasH - captionHeight - mb;
+        const bottomCaptionTopPercent = (bottomCaptionTop / canvasH) * 100;
+        const bottomCaptionHeightPercent = (captionHeight / canvasH) * 100;
+        els.captionArea.style.top = bottomCaptionTopPercent + '%';
+        els.captionArea.style.height = bottomCaptionHeightPercent + '%';
+        const box = els.captionBox;
+        box.style.display = 'inline-block';
+        const fontSize = (deviceKey === 'watch') ? Math.min(36, captionSize) : captionSize;
+        // Calculate font size relative to container
+        const canvasEl = els.canvas.getBoundingClientRect();
+        const scaledFontSize = (fontSize / canvasH) * canvasEl.height;
+        box.style.fontSize = scaledFontSize + 'px'; // Use actual pixels based on scaled canvas
+        box.style.lineHeight = String(lineHeight);
+        if (bgEnabled) {
+          box.style.background = hexToRgba(bgColorHex, bgOpacity);
+          const paddingPercent = (bgPadding / canvasW) * 100;
+          box.style.padding = `${paddingPercent}%`;
+          const widthPercent = ((canvasW - sideMargin * 2 - (bgPadding * 2)) / canvasW) * 100;
+          box.style.width = widthPercent + '%';
+        } else {
+          box.style.background = 'transparent';
+          box.style.padding = '0px';
+          box.style.width = 'auto';
+        }
+        box.style.borderRadius = `${bdRadius}px`;
+        if (bdEnabled) {
+          box.style.border = `${bdWidth}px solid ${bdColor}`;
+          box.style.borderRadius = `${bdRadius}px`;
+        } else {
+          box.style.border = 'none';
+        }
+        const captionHtml = (lines && lines.length) ? lines.map(l => escapeHtml(l)).join('<br>') : (captionText ? escapeHtml(captionText) : 'CAPTION');
+        box.innerHTML = captionHtml;
+        els.captionOverlay.style.display = 'none';
+        if (els.valign.value === 'top') {
+          els.captionArea.style.justifyContent = 'flex-start';
+        } else {
+          els.captionArea.style.justifyContent = 'center';
+        }
+      } else {
+        // overlay - From compose.ts lines 799-820
+        if (typeof framePosVal === 'number') {
+          availableSpace = canvasH - mb - targetDeviceHeight;
+          deviceTop = Math.floor(availableSpace * pct);
+        } else if (framePosVal === 0) { // 'top'
+          deviceTop = 0;
+        } else if (framePosVal === 100) { // 'bottom'
+          deviceTop = canvasH - mb - targetDeviceHeight;
+        } else { // 'center'
+          deviceTop = Math.floor((canvasH - mb - targetDeviceHeight) / 2);
+        }
+        
+        // Ensure device doesn't go off canvas
+        deviceTop = Math.floor(Math.max(0, Math.min(deviceTop, canvasH - mb - targetDeviceHeight)));
+        
+        els.captionArea.style.display = 'none';
+        els.captionOverlay.style.display = 'block';
+        // Render overlay text (multiline up to 2)
+        const overlayHtml = (lines && lines.length) ? lines.map(l => escapeHtml(l)).join('<br>') : (captionText ? escapeHtml(captionText) : 'Overlay caption');
+        els.captionOverlay.innerHTML = overlayHtml;
+        const overlayBase = (deviceKey === 'watch') ? Math.min(36, captionSize) : captionSize;
+        // Calculate font size relative to container for overlay (similar to above/below)
+        const canvasEl = els.canvas.getBoundingClientRect();
+        const scaledOverlaySize = (overlayBase / canvasH) * canvasEl.height;
+        els.captionOverlay.style.fontSize = scaledOverlaySize + 'px';
+        els.captionOverlay.style.lineHeight = String(lineHeight);
+        
+        // Position overlay at bottom of canvas (matching compose.ts behavior)
+        const overlayPadding = 60; // Match compose.ts default
+        els.captionOverlay.style.bottom = overlayPadding + 'px';
+        els.captionOverlay.style.top = 'auto'; // Clear any top positioning
+        
+        if (bgEnabled) {
+          els.captionOverlay.style.background = hexToRgba(bgColorHex, bgOpacity);
+          els.captionOverlay.style.padding = `${bgPadding}px`;
+        } else {
+          els.captionOverlay.style.background = 'transparent';
+          els.captionOverlay.style.padding = '8px 12px';
+        }
+        els.captionOverlay.style.borderRadius = `${bdRadius}px`;
+        // Make the overlay box exactly as wide as the width used for wrapping
+        const wrapWidthPercent = ((canvasW - sideMargin * 2 - (bgEnabled ? bgPadding * 2 : 0)) / canvasW) * 100;
+        els.captionOverlay.style.width = wrapWidthPercent + '%';
+        els.captionOverlay.style.maxWidth = wrapWidthPercent + '%';
+
+        // Vertical alignment: align box to top or center
+        if (els.valign.value === 'top') {
+          els.captionArea.style.alignItems = 'flex-start';
+          els.captionBox.style.marginTop = bgEnabled ? `${bgPadding}px` : '10px';
+        } else {
+          els.captionArea.style.alignItems = 'center';
+          els.captionBox.style.marginTop = '0px';
+        }
+        if (bdEnabled) {
+          els.captionOverlay.style.border = `${bdWidth}px solid ${bdColor}`;
+          els.captionOverlay.style.borderRadius = `${bdRadius}px`;
+        } else {
+          els.captionOverlay.style.border = 'none';
+        }
+      }
+
+      // Device dimensions are already calculated correctly above with frameScale included
+      // No need to recalculate - just use the values we already have
+
+      // Recompute deviceTop using final device height
+      if (captionPosition === 'above') {
+        availableSpace = canvasH - mt - captionHeight - mb - targetDeviceHeight;
+        deviceTop = mt + captionHeight + availableSpace * pct;
+      } else if (captionPosition === 'below') {
+        availableSpace = canvasH - captionHeight - mb - targetDeviceHeight;
+        deviceTop = availableSpace * pct;
+      } else {
+        availableSpace = canvasH - mb - targetDeviceHeight;
+        deviceTop = availableSpace * pct;
+      }
+
+      // Apply positioning as percentages for responsive layout
+      const deviceWidthPercent = (targetDeviceWidth / canvasW) * 100;
+      const deviceHeightPercent = (targetDeviceHeight / canvasH) * 100;
+      const deviceTopPercent = (deviceTop / canvasH) * 100;
+      
+      els.device.style.width = deviceWidthPercent + '%';
+      els.device.style.height = deviceHeightPercent + '%';
+      els.device.style.top = deviceTopPercent + '%';
+      els.device.style.opacity = frameOpacity;
+      
+      // Apply device-specific class
+      els.device.className = 'device ' + (deviceKey === 'watch' ? 'watch' : 'phone');
+      
+      // Handle device-specific styling
+      if (deviceKey === 'watch') {
+        // Watch specific dimensions are handled by CSS
+        els.device.style.borderRadius = ''; // Let CSS handle it
+      } else {
+        // Phone/tablet/mac styling
+        switch (deviceKey) {
+          case 'mac':
+            els.device.style.borderRadius = '8px';
+            break;
+          case 'ipad':
+            els.device.style.borderRadius = '18px';
+            break;
+          default:
+            els.device.style.borderRadius = '20px';
+        }
+        
+        // Height already set above in pixel positioning section
+        
+        // Toggle notch/home indicators to roughly match device
+        const notch = els.device.querySelector('.notch');
+        const home = els.device.querySelector('.home');
+        if (deviceKey === 'iphone') {
+          notch.style.display = 'block';
+          home.style.display = 'block';
+        } else if (deviceKey === 'ipad') {
+          notch.style.display = 'none';
+          home.style.display = 'block';
+        } else if (deviceKey === 'mac') {
+          notch.style.display = 'none';
+          home.style.display = 'none';
+        }
+      }
+
+      // Top position already set above
+      // Crop bottom portion when partialFrame is enabled
+      if (partialFrame) {
+        const clipAmount = Math.floor(targetDeviceHeight * (frameOffset / 100));
+        els.device.style.clipPath = `inset(0 0 ${clipAmount}px 0)`;
+      } else {
+        els.device.style.clipPath = 'none';
+      }
+
+      // Readout
+      els.read_deviceTop.textContent = Math.round(deviceTop);
+      els.read_deviceHeight.textContent = Math.round(targetDeviceHeight);
+      els.read_captionHeight.textContent = Math.round(captionHeight);
+      els.read_lines.textContent = String(lines.length);
+      els.read_space.textContent = Math.round(availableSpace);
+
+      // JSON output (matches real keys)
+      const json = buildJson(deviceKey, {
+        framePositionKind,
+        framePositionKeyword,
+        framePositionNum: framePosVal,
+        frameScale,
+        partialFrame,
+        frameOffset,
+        captionPosition,
+        captionSize,
+        lineHeight,
+        autoSize: els.autoSize.checked,
+        minHeight: parseInt(els.minHeight.value || '100', 10),
+        maxHeight: parseInt(els.maxHeight.value || '500', 10),
+        maxLines: parseInt(els.maxLines.value || '3', 10),
+        bgEnable: bgEnabled,
+        bgColor: bgColorHex,
+        bgOpacity: bgOpacity,
+        bgPadding: bgPadding,
+        bgSideMargin: sideMargin,
+        bdEnable: bdEnabled,
+        bdColor: bdColor,
+        bdWidth: bdWidth,
+        bdRadius: bdRadius,
+        verticalAlign: els.valign.value,
+        marginTop: mt,
+        marginBottom: mb
+      });
+      els.jsonOut.textContent = json;
+
+      // Default scale hint for selected device
+      if (!els.frameScale.dataset.user) {
+        const def = defaultScaleFor(deviceKey);
+        els.frameScale.value = String(def);
+        els.frameScaleVal.textContent = def.toFixed(2);
+      }
+    }
+
+    // Event wiring
+    [
+      'deviceSelect','captionPosition','framePosition','frameScale','partialFrame','frameOffset','frameOpacity',
+      'captionSize','lineHeight','captionText','autoSize','minHeight','maxHeight','maxLines','marginTop','marginBottom',
+      'frameMeta','bgEnable','bgColor','bgOpacity','bgPadding','bgSideMargin','bdEnable','bdColor','bdWidth','bdRadius','valign'
+    ].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.addEventListener('input', () => {
+          if (id === 'frameScale') els.frameScale.dataset.user = '1';
+          update();
+        });
+        el.addEventListener('change', update);
+      }
+    });
+
+    // Preset selector
+    els.presetSelect.addEventListener('change', () => {
+      const presetKey = els.presetSelect.value;
+      if (presetKey && PRESETS[presetKey]) {
+        const preset = PRESETS[presetKey].config;
+        
+        // Apply preset values
+        const currentDevice = els.deviceSelect.value;
+        
+        // Check for Watch-specific overrides
+        if (currentDevice === 'watch' && preset.watchOverrides) {
+          const overrides = preset.watchOverrides;
+          if (overrides.framePosition !== undefined) els.framePosition.value = overrides.framePosition;
+          if (overrides.captionPosition !== undefined) els.captionPosition.value = overrides.captionPosition;
+          if (overrides.captionSize !== undefined) els.captionSize.value = overrides.captionSize;
+          if (overrides.minHeight !== undefined) els.minHeight.value = overrides.minHeight;
+          if (overrides.maxHeight !== undefined) els.maxHeight.value = overrides.maxHeight;
+          if (overrides.bgOpacity !== undefined) els.bgOpacity.value = overrides.bgOpacity;
+          if (overrides.sideMargin !== undefined) els.bgSideMargin.value = overrides.sideMargin;
+          if (overrides.bgPadding !== undefined) els.bgPadding.value = overrides.bgPadding;
+        } else {
+          if (preset.framePosition !== undefined) els.framePosition.value = preset.framePosition;
+          if (preset.captionPosition !== undefined) els.captionPosition.value = preset.captionPosition;
+        }
+        
+        // Always check for device-specific scale FIRST, then fall back to general frameScale
+        if (preset.deviceScales && preset.deviceScales[currentDevice] !== undefined) {
+          els.frameScale.value = preset.deviceScales[currentDevice];
+          els.frameScale.dataset.user = '1';
+        } else if (preset.frameScale !== undefined) {
+          els.frameScale.value = preset.frameScale;
+          els.frameScale.dataset.user = '1';
+        }
+        // Apply captionSize unless already overridden by watch overrides
+        if (preset.captionSize !== undefined && !(currentDevice === 'watch' && preset.watchOverrides && preset.watchOverrides.captionSize !== undefined)) {
+          els.captionSize.value = preset.captionSize;
+        }
+        if (preset.autoSize !== undefined) els.autoSize.checked = preset.autoSize;
+        // Apply minHeight/maxHeight unless already overridden by watch overrides
+        if (preset.minHeight !== undefined && !(currentDevice === 'watch' && preset.watchOverrides && preset.watchOverrides.minHeight !== undefined)) {
+          els.minHeight.value = preset.minHeight;
+        }
+        if (preset.maxHeight !== undefined && !(currentDevice === 'watch' && preset.watchOverrides && preset.watchOverrides.maxHeight !== undefined)) {
+          els.maxHeight.value = preset.maxHeight;
+        }
+        if (preset.bgEnable !== undefined) els.bgEnable.checked = preset.bgEnable;
+        // Apply bgOpacity unless already overridden by watch overrides
+        if (preset.bgOpacity !== undefined && !(currentDevice === 'watch' && preset.watchOverrides && preset.watchOverrides.bgOpacity !== undefined)) {
+          els.bgOpacity.value = preset.bgOpacity;
+        }
+        if (preset.bgPadding !== undefined) els.bgPadding.value = preset.bgPadding;
+        if (preset.bdEnable !== undefined) els.bdEnable.checked = preset.bdEnable;
+        if (preset.bdWidth !== undefined) els.bdWidth.value = preset.bdWidth;
+        if (preset.bdRadius !== undefined) els.bdRadius.value = preset.bdRadius;
+        if (preset.marginTop !== undefined) els.marginTop.value = preset.marginTop;
+        if (preset.marginBottom !== undefined) els.marginBottom.value = preset.marginBottom;
+        
+        update();
+      }
+    });
+
+    // Grid toggle
+    let gridVisible = false;
+    els.toggleGrid.addEventListener('click', () => {
+      gridVisible = !gridVisible;
+      if (gridVisible) {
+        els.gridOverlay.style.display = 'block';
+        els.gridOverlay.className = 'grid-overlay ' + els.gridType.value;
+        els.toggleGrid.textContent = 'Hide Grid';
+        els.toggleGrid.classList.add('active');
+      } else {
+        els.gridOverlay.style.display = 'none';
+        els.toggleGrid.textContent = 'Show Grid';
+        els.toggleGrid.classList.remove('active');
+      }
+    });
+
+    // Grid type change
+    els.gridType.addEventListener('change', () => {
+      if (gridVisible) {
+        els.gridOverlay.className = 'grid-overlay ' + els.gridType.value;
+      }
+    });
+
+    // Export full config
+    els.exportConfig.addEventListener('click', async () => {
+      // Gather current state
+      const state = {
+        captionSize: parseInt(els.captionSize.value || '64', 10),
+        captionPosition: els.captionPosition.value,
+        framePositionKind: 'number',
+        framePositionKeyword: null,
+        framePositionNum: parseInt(els.framePosition.value, 10),
+        frameScale: parseFloat(els.frameScale.value),
+        partialFrame: els.partialFrame.checked,
+        frameOffset: parseInt(els.frameOffset.value || '25', 10),
+        autoSize: els.autoSize.checked,
+        minHeight: parseInt(els.minHeight.value || '100', 10),
+        maxHeight: parseInt(els.maxHeight.value || '500', 10),
+        maxLines: parseInt(els.maxLines.value || '3', 10),
+        lineHeight: parseFloat(els.lineHeight.value || '1.4'),
+        bgEnable: els.bgEnable.checked,
+        bgColor: els.bgColor.value || '#000000',
+        bgOpacity: parseFloat(els.bgOpacity.value || '0.8'),
+        bgPadding: parseInt(els.bgPadding.value || '20', 10),
+        bgSideMargin: parseInt(els.bgSideMargin.value || '30', 10),
+        bdEnable: els.bdEnable.checked,
+        bdColor: els.bdColor.value || '#FFFFFF',
+        bdWidth: parseInt(els.bdWidth.value || '2', 10),
+        bdRadius: parseInt(els.bdRadius.value || '12', 10),
+        verticalAlign: els.valign.value || 'center',
+        marginTop: parseInt(els.marginTop.value || '28', 10),
+        marginBottom: parseInt(els.marginBottom.value || '56', 10)
+      };
+      
+      // Check for keyword positions
+      const framePosVal = parseInt(els.framePosition.value, 10);
+      if (framePosVal === 0) { state.framePositionKind = 'keyword'; state.framePositionKeyword = 'top'; }
+      else if (framePosVal === 50) { state.framePositionKind = 'keyword'; state.framePositionKeyword = 'center'; }
+      else if (framePosVal === 100) { state.framePositionKind = 'keyword'; state.framePositionKeyword = 'bottom'; }
+      
+      const fullJson = buildFullJson(state);
+      
+      // Copy to clipboard
+      try {
+        await navigator.clipboard.writeText(fullJson);
+        
+        // Show toast
+        els.toast.classList.add('show');
+        setTimeout(() => {
+          els.toast.classList.remove('show');
+        }, 3000);
+      } catch (err) {
+        console.error('Failed to copy:', err);
+        alert('Failed to copy to clipboard. Please copy from console.');
+        console.log(fullJson);
+      }
+    });
+
+    // Initialize
+    window.addEventListener('load', () => {
+      update();
+      // If user changes device, reset frameScale to default for that device
+      els.deviceSelect.addEventListener('change', () => {
+        delete els.frameScale.dataset.user;
+        
+        // If a preset is selected, apply its device-specific scale
+        const presetKey = els.presetSelect.value;
+        if (presetKey && PRESETS[presetKey]) {
+          const preset = PRESETS[presetKey].config;
+          const currentDevice = els.deviceSelect.value;
+          if (preset.deviceScales && preset.deviceScales[currentDevice]) {
+            els.frameScale.value = preset.deviceScales[currentDevice];
+            els.frameScale.dataset.user = '1';
+          }
+        }
+        
+        update();
+      });
+    });
+    window.addEventListener('resize', () => {
+      // Recalculate scale on window resize
+      update();
+    });
+  </script>
+</body>
+<!--
+This guide intentionally mirrors configuration keys found in:
+  - src/types.ts (CaptionConfig, DeviceConfig)
+  - src/core/compose.ts (positioning formulas)
+  - src/core/text-utils.ts (wrapping/estimation heuristics)
+-->
+</html>
