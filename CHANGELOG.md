@@ -4,6 +4,46 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0] - 2025-01-19
+
+### ✨ Added
+- **MCP Server:** Full Model Context Protocol support with `appshot mcp` command
+- **17 MCP Tools:** Complete agent coverage:
+  - `appshot.projectInfo` - Get project metadata
+  - `appshot.init` - Initialize projects
+  - `appshot.build` - Generate screenshots
+  - `appshot.frame` - Apply device frames
+  - `appshot.captions` - Read/write/auto-generate caption text
+  - `appshot.gradients` - List/apply gradient presets
+  - `appshot.backgrounds` - Configure background images
+  - `appshot.fonts` - List/validate fonts
+  - `appshot.config` - Modify device settings
+  - `appshot.validate` - Check App Store compliance
+  - `appshot.specs` - View App Store specifications
+  - `appshot.doctor` - Run diagnostics
+  - `appshot.presets` - Manage presets
+  - `appshot.localize` - AI caption translation
+  - `appshot.languages` - Discover translations
+  - `appshot.export` - Fastlane export
+  - `appshot.clean` - Remove generated files
+- **Auto-Caption:** Generate captions from filenames automatically
+  - CLI: `appshot build --auto-caption`
+  - MCP: `appshot.captions` with `action: "auto"` or `action: "bulk-set"`
+  - Converts `home-screen.png` → "Home Screen"
+- **Skill Install Command:** `appshot skill` installs Claude Code skill
+  - Includes template recommendations by app type
+  - Troubleshooting guide for common errors
+  - Reference files for gradients, fonts, templates
+- **Claude Code Skill:** Enhanced skill with 4 reference files
+- **Frame Tone Option:** `appshot frame --frame-tone neutral` for desaturated frames
+
+### 🔄 Changed
+- Removed legacy Claude Code slash commands in favor of MCP tools and skill
+- Updated documentation with MCP integration guide
+
+### ⚠️ Known Issues
+- Claude Desktop MCP integration not yet stable; recommend Claude Code
+
 ## [0.8.7] - 2025-09-04
 
 ### 🐛 Bug Fixes

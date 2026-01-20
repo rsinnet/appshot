@@ -204,6 +204,31 @@ describe('frame command integration', () => {
     });
   });
 
+  describe('frame tone option', () => {
+    it('should accept the neutral tone flag', async () => {
+      await createTestImage(1290, 2796, 'tone.png');
+
+      const { stdout } = await execAsync(
+        `npm run dev -- frame ${path.join(inputDir, 'tone.png')} --frame-tone neutral --dry-run`
+      );
+
+      expect(stdout).toContain('images would be framed');
+    });
+
+    it('should reject invalid frame tone values', async () => {
+      await createTestImage(1290, 2796, 'tone-invalid.png');
+
+      try {
+        await execAsync(
+          `npm run dev -- frame ${path.join(inputDir, 'tone-invalid.png')} --frame-tone neon`
+        );
+        throw new Error('Command should have failed');
+      } catch (error: any) {
+        expect(error.stderr).toContain('Invalid --frame-tone value');
+      }
+    });
+  });
+
   describe('error handling', () => {
     it('should handle non-existent input file', async () => {
       try {

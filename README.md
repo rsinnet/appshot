@@ -10,44 +10,18 @@
 [![Node.js Version](https://img.shields.io/node/v/appshot-cli.svg)](https://nodejs.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-🆕 **Version 0.9.2** - **Simplified Layout Planner & Safe Caption Insets**
-- **One Layout Engine**: Every caption/device combo now runs through a single planner, so presets only style things—you never fight per-template math again.
-- **Safety Insets**: Automatic 40 px top/bottom protection plus default 48 px (above) / 36 px (below) gaps keep text clear of Apple’s quirky screenshot cropping.
-- **Template Consistency**: All built-in templates inherit the same spacing and only override fonts/colors; watch captions still cap at 36 px automatically.
-- **Caption-Only Presets**: Presets now render typography without auto-added boxes or borders so screenshots feel native to App Store Connect; add backgrounds manually if you really need them.
-- **Verbose Debugging**: `appshot build --dry-run --verbose` now prints `Insets` / `Caption gap` lines so you can reason about spacing without opening the PSD.
+🆕 **Version 1.0.0** - **MCP Server & Agent-First Architecture**
+- **MCP Server**: Full Model Context Protocol support for AI agents (Claude Desktop, Claude Code, etc.)
+- **17 MCP Tools**: Complete coverage - init, build, captions, gradients, backgrounds, fonts, config, validate, specs, doctor, presets, localize, languages, frame, export, clean, projectInfo
+- **Claude Code Skill**: Install with `appshot skill` - includes templates, troubleshooting guides
+- **Auto-Caption**: Generate captions from filenames with `--auto-caption` or MCP `action: "auto"`
+- **Direct Tool Access**: Agents can manage entire screenshot workflows without shell access
 
-**Version 0.9.1** - **Fastlane Export Integration & Screenshot Ordering**
-- **Export Command**: New `appshot export` command for seamless Fastlane integration
-- **Screenshot Ordering**: New `appshot order` command to control App Store screenshot sequence
-- **Order Flag**: Export with `--order` to add numeric prefixes (01_, 02_, etc.)
-- **Smart Ordering**: Handles existing prefixes, prevents double-prefixing
-- **Auto-Detection**: Automatically detects languages from your screenshots
-- **Language Mapping**: Smart mapping to Fastlane-compatible language codes (en → en-US, etc.)
-- **Device Filtering**: Export specific devices with `--devices iphone,ipad`
-- **Validation**: Pre-export validation with warnings and clear error messages
-- **Configuration Generation**: Auto-generate Deliverfile and Fastfile with `--generate-config`
-- **Flexible Output**: Choose between symlinks (default) or file copying with `--copy`
-- **iPad Pro Support**: Automatic IPAD_PRO_3GEN_129_ prefix for proper Fastlane recognition
-- **Dry Run Mode**: Preview export operations with `--dry-run`
-
-**Version 0.9.0** - **Professional Template System & Enhanced Positioning**
-- **Quick Start**: New `appshot quickstart` command for instant setup with templates
-- **Templates**: 8 professional templates (modern, minimal, bold, elegant, showcase, playful, corporate, nerdy)
-- **One Command Setup**: Apply complete visual styles with `appshot template <name>`
-- **Smart Defaults**: Each template includes optimized settings for all devices
-- **Caption Integration**: Templates can include captions directly with `--caption`
-- **Vertical Alignment**: Pin caption text to top or center within the caption box
-- **Side Margins**: Control caption box width with `sideMargin` (unified wrapping calculation)
-- **Outer Margins**: Add spacing with `marginTop`/`marginBottom` for better visual balance
-- **Apple Watch Fix**: Resolved positioning bug allowing proper framePosition control
-- **Exact Width Parity**: Caption wrapping now identical between preview and final render
-- **Template Samples Overhaul**: Local-only gallery with consolidated generator. Run `npm run samples` to regenerate all 8 presets across iPhone, iPad, Watch, and Mac. Gallery assets now live under `template-samples/gallery/` and the samples page matches the appshot.sh look (including ASCII header).
-
-> Note on layout changes (0.9.0): This release refines caption placement rules.
-> - Overlay captions are anchored by the bottom of the entire caption box (padding/border included), and `0` values are respected.
-> - Above/Below captions enforce a minimum optical clearance from the device and stay fully on‑canvas. In pathological cases where device + caption don’t fit, the engine adapts placement so order is preserved.
-> - Visual results may differ compared to 0.8.x when captions were near device edges. Adjust `marginTop` (below) / `marginBottom` (above) or `frameScale`/`framePosition` for fine‑tuning.
+**Version 0.9.x** - **Layout Engine, Templates & Fastlane**
+- **Fastlane Export**: Seamless integration with `appshot export` and screenshot ordering
+- **8 Professional Templates**: modern, minimal, bold, elegant, showcase, playful, corporate, nerdy
+- **Unified Layout Engine**: Single planner for all caption/device combinations
+- **Safety Insets**: Automatic 40px protection for App Store cropping
 
 ## 📖 Table of Contents
 
@@ -57,7 +31,7 @@
   - [Prerequisites](#prerequisites)
   - [Installation](#installation)
   - [Your First Screenshot](#your-first-screenshot)
-- [Claude Code Integration](#-claude-code-integration)
+- [MCP Server & Agent Integration](#-mcp-server--agent-integration)
 - [Core Concepts](#-core-concepts)
 - [Visual Customization](#-visual-customization)
   - [Gradient System](#gradient-system)
@@ -223,81 +197,136 @@ final/
         └── dashboard.png  # 2048×2732 iPad Pro screenshot
 ```
 
-## 🤖 Claude Code Integration
+## 🤖 MCP Server & Agent Integration
 
-Appshot includes comprehensive [Claude Code](https://claude.ai/code) slash commands for AI-assisted screenshot generation. See the [complete commands documentation](./commands/README.md) for detailed examples and workflows.
+Appshot provides a full Model Context Protocol (MCP) server, enabling AI agents like Claude Desktop and Claude Code to manage screenshot workflows directly through tool calls.
 
-### Available Commands
+### Installation
 
-Appshot provides specialized commands for different tasks:
+**Claude Code** (recommended):
+```bash
+# Add the MCP server
+claude mcp add appshot-mcp appshot mcp
 
-- `/appshot-init` - Initialize and configure new projects
-- `/appshot-preset` - One-line preset commands for instant screenshots
-- `/appshot-style` - Apply gradients, fonts, and visual styling
-- `/appshot-caption` - Manage captions and translations
-- `/appshot-build` - Build screenshots with troubleshooting
-- `/appshot-config` - Complete configuration reference
-- `/appshot-quick` - Quick reference for common tasks
+# Verify it's connected
+claude mcp list
+```
 
-### Quick Installation
+**Claude Desktop** (macOS):
+
+Edit `~/Library/Application Support/Claude/claude_desktop_config.json`:
+```json
+{
+  "mcpServers": {
+    "appshot": {
+      "command": "appshot",
+      "args": ["mcp"]
+    }
+  }
+}
+```
+
+> **Note:** Claude Desktop MCP support is experimental and may have issues. Claude Code is the recommended integration.
+
+### Available MCP Tools
+
+| Tool | Description |
+|------|-------------|
+| `appshot.projectInfo` | Get project metadata (devices, languages, config) |
+| `appshot.init` | Initialize new project structure |
+| `appshot.build` | Generate final screenshots |
+| `appshot.frame` | Apply device frames only (transparent background) |
+| `appshot.captions` | Read/write caption text, auto-generate from filenames |
+| `appshot.gradients` | List/apply gradient presets |
+| `appshot.backgrounds` | Configure background images |
+| `appshot.fonts` | List/validate available fonts |
+| `appshot.config` | Modify device-specific settings |
+| `appshot.validate` | Check App Store compliance |
+| `appshot.specs` | View App Store specifications |
+| `appshot.doctor` | Run system diagnostics |
+| `appshot.presets` | Manage App Store presets |
+| `appshot.localize` | AI-powered caption translation |
+| `appshot.languages` | Discover available translations |
+| `appshot.export` | Export for Fastlane |
+| `appshot.clean` | Remove generated files |
+
+### Example: Agent Workflow
+
+```
+Agent: I'll set up your App Store screenshots.
+
+1. appshot.init with force: true
+2. appshot.gradients with action: "apply", preset: "ocean"
+3. appshot.captions with device: "iphone", action: "set",
+   filename: "home.png", caption: "Welcome Home"
+4. appshot.build with devices: ["iphone"]
+5. appshot.validate
+
+✓ Screenshots ready in final/iphone/en/
+```
+
+**Auto-Caption Workflow** (generate captions from filenames):
+```
+1. appshot.init with force: true
+2. appshot.template with template: "modern"
+3. appshot.captions with device: "iphone", action: "auto"
+4. appshot.build with devices: ["iphone"]
+
+✓ Captions auto-generated: "home-screen.png" → "Home Screen"
+```
+
+### Claude Code Skill
+
+For Claude Code users, install the appshot skill for guided workflows:
 
 ```bash
-# If you have AppShot source code
-cd appshot
-./commands/install.sh
+# Install skill to ~/.claude/skills/appshot/
+appshot skill
 
-# If installed via npm
-cd node_modules/appshot-cli
-./commands/install.sh
+# Update existing installation
+appshot skill --force
 
-# Manual installation
-mkdir -p ~/.claude/commands
-ln -sf "$(pwd)/commands"/*.md ~/.claude/commands/
+# Uninstall
+appshot skill --uninstall
 ```
 
-### How It Works
+The skill provides:
+- Project workflow guidance (init → captions → styling → build)
+- Template recommendations by app type (dev tools → nerdy, business → corporate)
+- Troubleshooting guide for common errors
+- Reference files for all 24 gradients, 10 fonts, and 8 templates
 
-When you use a command like `/appshot-style ocean iphone` in Claude Code:
+### Agent-Friendly Features
 
-1. Claude receives complete documentation for that specific task
-2. All necessary configurations and examples are provided inline
-3. No need to search documentation or run help commands
-4. Claude can immediately execute the appropriate AppShot CLI commands
+- **Structured Output**: All tools return JSON for easy parsing
+- **No Interactive Prompts**: Full automation without user input
+- **Predictable Commands**: Consistent tool interfaces
+- **Complete Coverage**: Every CLI feature available as MCP tool
 
-### Example Conversation
+### Claude Desktop: Not Yet Supported
 
+> ⚠️ **Note**: Claude Desktop MCP integration is not currently working reliably. We recommend using **Claude Code** for the best experience with appshot's MCP tools.
+
+**Known Issues with Claude Desktop:**
+
+1. **Working Directory**: Claude Desktop runs MCP servers from the user's home directory, causing path resolution issues.
+
+2. **Tool Availability**: MCP tools may not appear or function correctly in Claude Desktop's interface.
+
+3. **Server Lifecycle**: The MCP server connection is unstable and may require frequent restarts.
+
+**Recommended Alternative:**
+
+Use **Claude Code** with the appshot skill for reliable agent integration:
+
+```bash
+# Install the skill
+appshot skill
+
+# Claude Code will now have access to appshot documentation and workflows
 ```
-User: I need to add Apple Watch support to my existing iPhone project
 
-Claude: I'll help you add Apple Watch to your project. Let me use /appshot-config
-        to show you the exact configuration needed.
-
-        Add this to your .appshot/config.json under "devices":
-
-        "watch": {
-          "input": "./screenshots/watch",
-          "resolution": "410x502",
-          "autoFrame": true
-        }
-
-        Note: Apple Watch has special caption handling - uses 2-line wrapping 
-        and smaller font size (36px max) for the smaller screen.
-```
-
-### Features for AI Agents
-
-- **Self-Contained**: Each command includes all necessary information
-- **No Lookups Required**: Commands work without external documentation
-- **Agent-Friendly**: Non-interactive commands for full automation
-- **Complete Examples**: Real-world configurations and workflows
-- **Troubleshooting**: Built-in solutions for common issues
-
-### Learn More
-
-For complete documentation, examples, and advanced workflows, see:
-- 📚 [Commands Documentation](./commands/README.md) - Full guide with examples
-- 📁 [Commands Directory](./commands/) - Individual command files
-- 🛠️ [Installation Script](./commands/install.sh) - Automated setup
+We're working with Anthropic to resolve Claude Desktop compatibility issues.
 
 ## 📘 Core Concepts
 
@@ -1663,6 +1692,7 @@ appshot build [options]
 - `--no-frame` - Skip device frames
 - `--no-gradient` - Skip gradient backgrounds
 - `--no-caption` - Skip captions
+- `--auto-caption` - Generate captions from filenames when none exist
 
 **Language Detection:**
 When `--langs` is not specified, appshot automatically determines languages in this order:
@@ -1690,6 +1720,9 @@ appshot build --dry-run
 
 # Verbose mode for debugging
 appshot build --verbose --devices iphone
+
+# Auto-generate captions from filenames
+appshot build --auto-caption --devices iphone
 ```
 
 **Exit Codes:**
@@ -1904,6 +1937,7 @@ appshot frame <input> [options]
 - `--suffix <text>` - Filename suffix when not overwriting (default: "-framed")
 - `--overwrite` - Overwrite original file name
 - `--dry-run` - Preview files without processing
+- `--frame-tone <tone>` - Frame color treatment (`original` | `neutral`)
 - `--verbose` - Show detailed information
 
 **Features:**
@@ -1932,7 +1966,70 @@ appshot frame ./screenshots --dry-run --verbose
 
 # JPEG output (white background)
 appshot frame screenshot.png --format jpeg
+
+# Generate neutral (desaturated) device frames
+appshot frame screenshot.png --frame-tone neutral
 ```
+
+### `appshot mcp`
+
+Start the Model Context Protocol (MCP) server for AI agent integration. Enables Claude Desktop, Claude Code, and other MCP-compatible agents to control appshot directly.
+
+```bash
+appshot mcp [options]
+```
+
+**Options:**
+- `--stdio` - Use stdio transport (default)
+
+**Usage:**
+Register in Claude Desktop's config to enable AI-powered screenshot workflows. See [MCP Server & Agent Integration](#-mcp-server--agent-integration) for setup details.
+
+```bash
+appshot mcp
+```
+
+**Tools exposed:**
+
+- `appshot.projectInfo` – Returns `appshot.json` metadata (devices, languages, templates).
+- `appshot.doctor` – Runs diagnostics and returns console output.
+- `appshot.build` – Wraps `appshot build` with options for devices, languages, and rendering flags.
+- `appshot.frame` – Batch frames screenshots (including `--frame-tone neutral` support).
+- `appshot.export` – Runs the Fastlane export pipeline.
+
+The server uses the stdio transport, so you can register it in Anthropic Desktop by pointing at `appshot mcp` (working directory = your Appshot project). The same entry point works for any MCP-compatible agent or automation.
+
+### `appshot skill`
+
+Install the appshot skill for Claude Code. The skill provides workflow guidance, template recommendations, and troubleshooting help.
+
+```bash
+appshot skill [options]
+```
+
+**Options:**
+- `--force` - Overwrite existing installation
+- `--uninstall` - Remove the skill
+- `--path <dir>` - Custom installation path
+
+**Examples:**
+```bash
+# Install skill to ~/.claude/skills/appshot/
+appshot skill
+
+# Update existing installation
+appshot skill --force
+
+# Uninstall
+appshot skill --uninstall
+```
+
+**Skill contents:**
+- `SKILL.md` - Main documentation with workflows and scenarios
+- `references/templates.md` - All 8 templates with recommendations by app type
+- `references/gradients.md` - All 24 gradient presets with colors
+- `references/fonts.md` - All 10 embedded font families
+- `references/troubleshooting.md` - Common errors and solutions
 
 ### `appshot device` (macOS only)
 
@@ -2945,24 +3042,22 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 - [x] AI-Powered Translations (GPT-4o, GPT-5, o1, o3)
 - [x] Comprehensive Font System (v0.4.0)
 - [x] Frame-Only Mode (v0.8.0)
+- [x] MCP Server with 17 tools (v1.0.0)
+- [x] Claude Code Skill (v1.0.0)
+- [x] Fastlane Export Integration (v0.9.1)
+- [x] Professional Template System (v0.9.0)
+- [x] Auto-Caption from Filenames (v0.9.2)
 
 ### In Progress 🚧
-- [ ] MCP Integration Guide
-- [ ] Agent API Mode
+- [ ] Claude Desktop MCP compatibility
+- [ ] Android Device Support (Google Play Store)
 
 ### Planned 📋
-- [ ] Fastlane Integration Plugin
 - [ ] GitHub Actions Marketplace Action
 - [ ] CI/CD Templates (Jenkins, GitLab CI, CircleCI)
-- [ ] Image Backgrounds (as alternative to gradients)
-- [ ] Screenshot Templates System
-- [ ] Android Device Support (Google Play Store)
-- [ ] Batch Config Files
-- [ ] Screenshot Validation API
-- [ ] Auto-Caption Generation (AI-powered)
-- [ ] Smart Frame Detection (ML-based)
-- [ ] Pipeline Mode
+- [ ] AI-Powered Caption Enhancement
 - [ ] WebP/AVIF Support
+- [ ] Screenshot A/B Testing Framework
 - [ ] Differential Builds
 - [ ] Screenshot A/B Testing Framework
 
@@ -2986,7 +3081,7 @@ For security vulnerabilities, please see [SECURITY.md](SECURITY.md).
 ### NPM Package
 
 - 📦 [appshot-cli on NPM](https://www.npmjs.com/package/appshot-cli)
-- 🔄 Latest version: 0.9.0
+- 🔄 Latest version: 1.0.0
 
 ---
 

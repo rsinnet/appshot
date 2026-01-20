@@ -6,6 +6,7 @@ export default defineConfig({
     environment: 'node',
     testTimeout: 30000, // Increase timeout for Windows CI
     exclude: [
+      'node_modules/**',
       'guide/**/*.spec.*'
     ],
     coverage: {
