@@ -7,6 +7,7 @@ import { loadConfig, loadCaptions } from '../core/files.js';
 import { autoSelectFrame, getImageDimensions, initializeFrameRegistry } from '../core/devices.js';
 import { composeAppStoreScreenshot } from '../core/compose.js';
 import { resolveLanguages, normalizeLanguageCode } from '../utils/language.js';
+import { filenameToCaption } from '../utils/filename-caption.js';
 
 export default function buildCmd() {
   const cmd = new Command('build')
@@ -26,6 +27,7 @@ export default function buildCmd() {
     .option('--auto-background', 'auto-detect background.png in device folders')
     .option('--dry-run', 'show what would be rendered without generating images')
     .option('--verbose', 'show detailed rendering information')
+    .option('--auto-caption', 'generate captions from filenames when none exist')
     .addHelpText('after', `
 ${pc.bold('Examples:')}
   ${pc.dim('# Build all devices')}
@@ -57,6 +59,9 @@ ${pc.bold('Examples:')}
   
   ${pc.dim('# Show detailed rendering info')}
   $ appshot build --verbose
+
+  ${pc.dim('# Auto-generate captions from filenames')}
+  $ appshot build --auto-caption
 
 ${pc.bold('Output:')}
   Screenshots are saved to: ${pc.cyan('final/[device]/[language]/')}
@@ -175,6 +180,11 @@ ${pc.bold('Language Detection:')}
                     captionText = captionData;
                   } else if (captionData && typeof captionData === 'object') {
                     captionText = captionData[lang] || '';
+                  }
+
+                  // Fallback to auto-caption from filename
+                  if (!captionText && opts.autoCaption) {
+                    captionText = filenameToCaption(screenshot);
                   }
 
                   // Get screenshot dimensions and orientation

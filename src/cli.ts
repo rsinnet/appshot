@@ -26,6 +26,9 @@ import quickstartCmd from './commands/quickstart.js';
 import presetCmd from './commands/preset.js';
 import exportCmd from './commands/export.js';
 import orderCmd from './commands/order.js';
+import mcpCmd from './commands/mcp.js';
+import skillCmd from './commands/skill.js';
+import { APP_VERSION } from './version.js';
 
 const program = new Command();
 
@@ -70,7 +73,7 @@ ${pc.bold('Common Workflows:')}
   $ appshot watch start --process             # Auto-process new screenshots` : ''}
 
 ${pc.dim('Docs: https://github.com/chrisvanbuskirk/appshot')}`)
-  .version('0.9.2')
+  .version(APP_VERSION)
   .addHelpText('after', `\n${pc.bold('Environment Variables:')}
   OPENAI_API_KEY              API key for translation features
   APPSHOT_DISABLE_FONT_SCAN   Skip system font detection (CI optimization)
@@ -96,6 +99,8 @@ program.addCommand(buildCmd());
 program.addCommand(frameCmd());
 program.addCommand(orderCmd());
 program.addCommand(exportCmd());
+program.addCommand(mcpCmd());
+program.addCommand(skillCmd());
 
 // Add device and watch commands only on macOS
 if (platform() === 'darwin') {

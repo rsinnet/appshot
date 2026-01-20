@@ -63,5 +63,72 @@ describe('composeFrameOnly', () => {
     const alphaOutside = raw.data[idxOutside + 3];
     expect(alphaOutside).toBe(0);
   });
-});
 
+  it('supports neutral frame tone by desaturating the frame', async () => {
+    const frameWidth = 20;
+    const frameHeight = 20;
+    const screenRect = { x: 5, y: 5, width: 10, height: 10 };
+
+    const screenshot = await sharp({
+      create: {
+        width: screenRect.width,
+        height: screenRect.height,
+        channels: 4,
+        background: { r: 0, g: 0, b: 0, alpha: 1 }
+      }
+    }).png().toBuffer();
+
+    const coloredFrame = await sharp({
+      create: {
+        width: frameWidth,
+        height: frameHeight,
+        channels: 4,
+        background: { r: 250, g: 100, b: 180, alpha: 1 }
+      }
+    }).png().toBuffer();
+
+    const neutral = await composeFrameOnly({
+      screenshot,
+      frame: coloredFrame,
+      frameMetadata: {
+        frameWidth,
+        frameHeight,
+        screenRect,
+        deviceType: 'mac'
+      },
+      outputFormat: 'png',
+      frameTone: 'neutral'
+    });
+
+    const original = await composeFrameOnly({
+      screenshot,
+      frame: coloredFrame,
+      frameMetadata: {
+        frameWidth,
+        frameHeight,
+        screenRect,
+        deviceType: 'mac'
+      },
+      outputFormat: 'png',
+      frameTone: 'original'
+    });
+
+    const neutralPixel = await sharp(neutral).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+    const originalPixel = await sharp(original).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+
+    const idx = 0; // top-left pixel (outside screenRect)
+    const nR = neutralPixel.data[idx];
+    const nG = neutralPixel.data[idx + 1];
+    const nB = neutralPixel.data[idx + 2];
+
+    const oR = originalPixel.data[idx];
+    const oG = originalPixel.data[idx + 1];
+    const oB = originalPixel.data[idx + 2];
+
+    expect(Math.abs(nR - nG)).toBeLessThan(3);
+    expect(Math.abs(nR - nB)).toBeLessThan(3);
+    // Original frame should remain colorful (channel variance)
+    expect(Math.abs(oR - oG)).toBeGreaterThan(5);
+    expect(Math.abs(oR - oB)).toBeGreaterThan(5);
+  });
+});

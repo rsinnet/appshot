@@ -8,6 +8,8 @@ import { composeFrameOnly } from '../core/compose.js';
 
 type DeviceType = 'iphone' | 'ipad' | 'mac' | 'watch';
 
+type FrameTone = 'original' | 'neutral';
+
 interface FrameCommandOptions {
   output?: string;
   device?: DeviceType;
@@ -17,6 +19,7 @@ interface FrameCommandOptions {
   overwrite?: boolean;
   verbose?: boolean;
   dryRun?: boolean;
+  frameTone?: FrameTone;
 }
 
 function isImage(file: string): boolean {
@@ -116,7 +119,8 @@ async function processSingleFile(inputPath: string, framesDir: string, options: 
       },
       outputFormat: options.format || 'png',
       jpegQuality: 92,
-      verbose: options.verbose
+      verbose: options.verbose,
+      frameTone: options.frameTone
     });
   } catch (err) {
     console.error(pc.red('  ✗'), path.basename(inputPath), pc.dim(`Compose failed: ${err instanceof Error ? err.message : String(err)}`));
@@ -169,6 +173,7 @@ export default function frameCmd() {
     .option('--suffix <text>', 'filename suffix when not overwriting', '-framed')
     .option('--overwrite', 'overwrite original file name')
     .option('--dry-run', 'preview files without processing')
+    .option('--frame-tone <tone>', 'frame color treatment (original|neutral)', 'original')
     .option('--verbose', 'show detailed information')
     .addHelpText('after', `
 ${pc.bold('Examples:')}
@@ -187,6 +192,13 @@ ${pc.bold('Examples:')}
   ${pc.dim('# Dry run with verbose logs')}
   $ appshot frame ./screenshots --dry-run --verbose`)
     .action(async (input: string, opts) => {
+      const frameToneInput = typeof opts.frameTone === 'string' ? opts.frameTone.toLowerCase() : 'original';
+      const validFrameTones: FrameTone[] = ['original', 'neutral'];
+      if (!validFrameTones.includes(frameToneInput as FrameTone)) {
+        console.error(pc.red('Invalid --frame-tone value. Use one of:'), validFrameTones.join(', '));
+        process.exit(1);
+      }
+
       const options: FrameCommandOptions = {
         output: opts.output,
         device: opts.device,
@@ -195,7 +207,8 @@ ${pc.bold('Examples:')}
         suffix: opts.suffix,
         overwrite: Boolean(opts.overwrite),
         verbose: Boolean(opts.verbose),
-        dryRun: Boolean(opts.dryRun)
+        dryRun: Boolean(opts.dryRun),
+        frameTone: frameToneInput as FrameTone
       };
 
       // Validate device option if provided

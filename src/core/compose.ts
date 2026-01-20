@@ -1247,11 +1247,32 @@ export async function composeFrameOnly(options: {
   outputFormat?: 'png' | 'jpeg';
   jpegQuality?: number;
   verbose?: boolean;
+  frameTone?: 'original' | 'neutral';
 }): Promise<Buffer> {
-  const { screenshot, frame, frameMetadata, outputFormat = 'png', jpegQuality = 92, verbose = false } = options;
+  const {
+    screenshot,
+    frame,
+    frameMetadata,
+    outputFormat = 'png',
+    jpegQuality = 92,
+    verbose = false,
+    frameTone = 'original'
+  } = options;
 
   if (!frame || !frameMetadata) {
     throw new Error('composeFrameOnly requires a frame buffer and frame metadata');
+  }
+
+  let frameBuffer = frame;
+  if (frameTone === 'neutral') {
+    try {
+      frameBuffer = await sharp(frame).modulate({ saturation: 0 }).toBuffer();
+      if (verbose) {
+        console.log(pc.dim('  Frame tone: neutral/desaturated'));
+      }
+    } catch (err) {
+      console.warn(pc.yellow('Warning:'), pc.dim(`Failed to apply neutral frame tone: ${err instanceof Error ? err.message : String(err)}`));
+    }
   }
 
   const { frameWidth, frameHeight, screenRect } = frameMetadata;
@@ -1325,7 +1346,7 @@ export async function composeFrameOnly(options: {
   // Composite screenshot at screen coordinates, then overlay frame image
   let composed = base.composite([
     { input: resizedScreenshot, top: screenRect.y, left: screenRect.x },
-    { input: frame, top: 0, left: 0 }
+    { input: frameBuffer, top: 0, left: 0 }
   ]);
 
   if (outputFormat === 'png') {

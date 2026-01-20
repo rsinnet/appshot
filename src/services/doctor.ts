@@ -8,6 +8,7 @@ import { FontService } from './fonts.js';
 import { loadConfig } from '../core/files.js';
 import { frameRegistry } from '../core/devices.js';
 import { systemRequirements } from './system-requirements.js';
+import { APP_VERSION } from '../version.js';
 
 const execAsync = promisify(exec);
 
@@ -578,7 +579,7 @@ export class DoctorService {
 
     return {
       timestamp: new Date().toISOString(),
-      version: '0.9.2',
+      version: APP_VERSION,
       platform: platform(),
       checks: categorizedChecks,
       summary,
