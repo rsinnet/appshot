@@ -4,28 +4,33 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2025-01-20
+
+### 🐛 Fixed
+- **Claude Desktop Compatibility:** Changed MCP tool names from `appshot.X` to `appshot_X` to comply with Claude Desktop's tool name validation pattern (`^[a-zA-Z0-9_-]{1,64}$`)
+
 ## [1.0.0] - 2025-01-19
 
 ### ✨ Added
 - **MCP Server:** Full Model Context Protocol support with `appshot mcp` command
 - **17 MCP Tools:** Complete agent coverage:
-  - `appshot.projectInfo` - Get project metadata
-  - `appshot.init` - Initialize projects
-  - `appshot.build` - Generate screenshots
-  - `appshot.frame` - Apply device frames
-  - `appshot.captions` - Read/write/auto-generate caption text
-  - `appshot.gradients` - List/apply gradient presets
-  - `appshot.backgrounds` - Configure background images
-  - `appshot.fonts` - List/validate fonts
-  - `appshot.config` - Modify device settings
-  - `appshot.validate` - Check App Store compliance
-  - `appshot.specs` - View App Store specifications
-  - `appshot.doctor` - Run diagnostics
-  - `appshot.presets` - Manage presets
-  - `appshot.localize` - AI caption translation
-  - `appshot.languages` - Discover translations
-  - `appshot.export` - Fastlane export
-  - `appshot.clean` - Remove generated files
+  - `appshot_projectInfo` - Get project metadata
+  - `appshot_init` - Initialize projects
+  - `appshot_build` - Generate screenshots
+  - `appshot_frame` - Apply device frames
+  - `appshot_captions` - Read/write/auto-generate caption text
+  - `appshot_gradients` - List/apply gradient presets
+  - `appshot_backgrounds` - Configure background images
+  - `appshot_fonts` - List/validate fonts
+  - `appshot_config` - Modify device settings
+  - `appshot_validate` - Check App Store compliance
+  - `appshot_specs` - View App Store specifications
+  - `appshot_doctor` - Run diagnostics
+  - `appshot_presets` - Manage presets
+  - `appshot_localize` - AI caption translation
+  - `appshot_languages` - Discover translations
+  - `appshot_export` - Fastlane export
+  - `appshot_clean` - Remove generated files
 - **Auto-Caption:** Generate captions from filenames automatically
   - CLI: `appshot build --auto-caption`
   - MCP: `appshot.captions` with `action: "auto"` or `action: "bulk-set"`

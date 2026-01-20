@@ -1,6 +1,6 @@
 # Troubleshooting Guide
 
-Common issues and solutions when using appshot.
+Common issues and solutions when using appshot_
 
 ---
 
@@ -12,7 +12,7 @@ Common issues and solutions when using appshot.
 
 **Solution:**
 ```
-appshot.init with force: true
+appshot_init with force: true
 ```
 
 ### "Input directory not found"
@@ -38,13 +38,13 @@ appshot.init with force: true
 **Solutions:**
 ```
 # Check current captions
-appshot.captions with device: "iphone", action: "list"
+appshot_captions with device: "iphone", action: "list"
 
 # Auto-generate from filenames
-appshot.captions with device: "iphone", action: "auto"
+appshot_captions with device: "iphone", action: "auto"
 
 # Set manually
-appshot.captions with device: "iphone", action: "set", filename: "screen.png", caption: "My Caption"
+appshot_captions with device: "iphone", action: "set", filename: "screen.png", caption: "My Caption"
 ```
 
 ### Caption text cut off
@@ -55,7 +55,7 @@ appshot.captions with device: "iphone", action: "set", filename: "screen.png", c
 1. Use shorter text (2-3 words ideal)
 2. Adjust caption box settings:
 ```
-appshot.config with device: "iphone", captionPosition: "above"
+appshot_config with device: "iphone", captionPosition: "above"
 ```
 
 ### Wrong font displaying
@@ -65,10 +65,10 @@ appshot.config with device: "iphone", captionPosition: "above"
 **Solution:**
 ```
 # Check font availability
-appshot.fonts with action: "validate", font: "SF Pro Display"
+appshot_fonts with action: "validate", font: "SF Pro Display"
 
 # List embedded fonts (always available)
-appshot.fonts with action: "embedded"
+appshot_fonts with action: "embedded"
 ```
 
 **Embedded fonts:** Inter, Poppins, Montserrat, DM Sans, Roboto, Open Sans, Lato, Work Sans, JetBrains Mono, Fira Code
@@ -109,7 +109,7 @@ appshot.fonts with action: "embedded"
 **Solutions:**
 ```
 # Run diagnostics
-appshot.doctor
+appshot_doctor
 ```
 
 ### "Failed to load screenshot"
@@ -126,13 +126,13 @@ appshot.doctor
 **Solutions:**
 ```
 # Reduce concurrency on low-memory systems
-appshot.build with concurrency: 2
+appshot_build with concurrency: 2
 
 # Build specific devices only
-appshot.build with devices: ["iphone"]
+appshot_build with devices: ["iphone"]
 
 # Use preview mode for testing
-appshot.build with preview: true
+appshot_build with preview: true
 ```
 
 ---
@@ -148,17 +148,17 @@ appshot.build with preview: true
 **Solutions:**
 ```
 # Set background explicitly
-appshot.backgrounds with action: "set", image: "./bg.png", fit: "cover"
+appshot_backgrounds with action: "set", image: "./bg.png", fit: "cover"
 
 # Or use auto-detect (looks for background.png in device folders)
-appshot.build with autoBackground: true
+appshot_build with autoBackground: true
 ```
 
 ### Background looks stretched/cropped
 
 **Solution:** Change fit mode:
 ```
-appshot.backgrounds with action: "set", image: "./bg.png", fit: "contain"
+appshot_backgrounds with action: "set", image: "./bg.png", fit: "contain"
 ```
 
 Fit modes:
@@ -178,10 +178,10 @@ Fit modes:
 **Solution:**
 ```
 # Check required specs
-appshot.specs with device: "iphone", required: true
+appshot_specs with device: "iphone", required: true
 
 # Use presets for correct sizing
-appshot.build with presets: ["iphone-6-9", "ipad-13"]
+appshot_build with presets: ["iphone-6-9", "ipad-13"]
 ```
 
 ### Missing required sizes
@@ -199,7 +199,7 @@ appshot.build with presets: ["iphone-6-9", "ipad-13"]
 **Solution:**
 ```
 # Run doctor to check system
-appshot.doctor
+appshot_doctor
 
 # Reinstall if needed (in terminal)
 npm rebuild sharp
@@ -217,7 +217,7 @@ npm rebuild sharp
 
 Run the doctor command to check all systems:
 ```
-appshot.doctor
+appshot_doctor
 ```
 
 This checks:

@@ -60,10 +60,10 @@
 
 To apply a gradient:
 ```
-appshot.gradients with action: "apply", preset: "<id>"
+appshot_gradients with action: "apply", preset: "<id>"
 ```
 
 To list gradients by category:
 ```
-appshot.gradients with action: "list", category: "warm"
+appshot_gradients with action: "list", category: "warm"
 ```

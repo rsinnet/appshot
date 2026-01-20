@@ -41,15 +41,15 @@
 
 List embedded fonts:
 ```
-appshot.fonts with action: "embedded"
+appshot_fonts with action: "embedded"
 ```
 
 Validate a font:
 ```
-appshot.fonts with action: "validate", font: "Inter"
+appshot_fonts with action: "validate", font: "Inter"
 ```
 
 Configure font in project:
 ```
-appshot.config with device: "iphone", font: "Montserrat Bold"
+appshot_config with device: "iphone", font: "Montserrat Bold"
 ```
