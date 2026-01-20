@@ -33,7 +33,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
   - `appshot_clean` - Remove generated files
 - **Auto-Caption:** Generate captions from filenames automatically
   - CLI: `appshot build --auto-caption`
-  - MCP: `appshot.captions` with `action: "auto"` or `action: "bulk-set"`
+  - MCP: `appshot_captions` with `action: "auto"` or `action: "bulk-set"`
   - Converts `home-screen.png` → "Home Screen"
 - **Skill Install Command:** `appshot skill` installs Claude Code skill
   - Includes template recommendations by app type
@@ -45,9 +45,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### 🔄 Changed
 - Removed legacy Claude Code slash commands in favor of MCP tools and skill
 - Updated documentation with MCP integration guide
-
-### ⚠️ Known Issues
-- Claude Desktop MCP integration not yet stable; recommend Claude Code
 
 ## [0.8.7] - 2025-09-04
 

@@ -226,7 +226,7 @@ Edit `~/Library/Application Support/Claude/claude_desktop_config.json`:
 }
 ```
 
-> **Note:** Claude Desktop MCP support is experimental and may have issues. Claude Code is the recommended integration.
+> **Tip:** When using Claude Desktop, provide the full `configPath` parameter to your project directory since the server runs from the home directory.
 
 ### Available MCP Tools
 
@@ -255,22 +255,22 @@ Edit `~/Library/Application Support/Claude/claude_desktop_config.json`:
 ```
 Agent: I'll set up your App Store screenshots.
 
-1. appshot.init with force: true
-2. appshot.gradients with action: "apply", preset: "ocean"
-3. appshot.captions with device: "iphone", action: "set",
+1. appshot_init with force: true
+2. appshot_gradients with action: "apply", preset: "ocean"
+3. appshot_captions with device: "iphone", action: "set",
    filename: "home.png", caption: "Welcome Home"
-4. appshot.build with devices: ["iphone"]
-5. appshot.validate
+4. appshot_build with devices: ["iphone"]
+5. appshot_validate
 
 ✓ Screenshots ready in final/iphone/en/
 ```
 
 **Auto-Caption Workflow** (generate captions from filenames):
 ```
-1. appshot.init with force: true
-2. appshot.template with template: "modern"
-3. appshot.captions with device: "iphone", action: "auto"
-4. appshot.build with devices: ["iphone"]
+1. appshot_init with force: true
+2. appshot_template with template: "modern"
+3. appshot_captions with device: "iphone", action: "auto"
+4. appshot_build with devices: ["iphone"]
 
 ✓ Captions auto-generated: "home-screen.png" → "Home Screen"
 ```
@@ -303,30 +303,26 @@ The skill provides:
 - **Predictable Commands**: Consistent tool interfaces
 - **Complete Coverage**: Every CLI feature available as MCP tool
 
-### Claude Desktop: Not Yet Supported
+### Claude Desktop Support
 
-> ⚠️ **Note**: Claude Desktop MCP integration is not currently working reliably. We recommend using **Claude Code** for the best experience with appshot's MCP tools.
+Claude Desktop is fully supported as of v1.0.1. Add appshot to your Claude Desktop configuration:
 
-**Known Issues with Claude Desktop:**
+**macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
 
-1. **Working Directory**: Claude Desktop runs MCP servers from the user's home directory, causing path resolution issues.
-
-2. **Tool Availability**: MCP tools may not appear or function correctly in Claude Desktop's interface.
-
-3. **Server Lifecycle**: The MCP server connection is unstable and may require frequent restarts.
-
-**Recommended Alternative:**
-
-Use **Claude Code** with the appshot skill for reliable agent integration:
-
-```bash
-# Install the skill
-appshot skill
-
-# Claude Code will now have access to appshot documentation and workflows
+```json
+{
+  "mcpServers": {
+    "appshot": {
+      "command": "appshot",
+      "args": ["mcp"]
+    }
+  }
+}
 ```
 
-We're working with Anthropic to resolve Claude Desktop compatibility issues.
+Restart Claude Desktop after adding the configuration. All 19 MCP tools will be available.
+
+> **Tip:** When using Claude Desktop, always provide the full `configPath` parameter pointing to your project directory, since Claude Desktop runs from the home directory.
 
 ## 📘 Core Concepts
 
@@ -3049,7 +3045,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 - [x] Auto-Caption from Filenames (v0.9.2)
 
 ### In Progress 🚧
-- [ ] Claude Desktop MCP compatibility
+- [x] Claude Desktop MCP compatibility ✅ (v1.0.1)
 - [ ] Android Device Support (Google Play Store)
 
 ### Planned 📋
