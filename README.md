@@ -232,23 +232,23 @@ Edit `~/Library/Application Support/Claude/claude_desktop_config.json`:
 
 | Tool | Description |
 |------|-------------|
-| `appshot.projectInfo` | Get project metadata (devices, languages, config) |
-| `appshot.init` | Initialize new project structure |
-| `appshot.build` | Generate final screenshots |
-| `appshot.frame` | Apply device frames only (transparent background) |
-| `appshot.captions` | Read/write caption text, auto-generate from filenames |
-| `appshot.gradients` | List/apply gradient presets |
-| `appshot.backgrounds` | Configure background images |
-| `appshot.fonts` | List/validate available fonts |
-| `appshot.config` | Modify device-specific settings |
-| `appshot.validate` | Check App Store compliance |
-| `appshot.specs` | View App Store specifications |
-| `appshot.doctor` | Run system diagnostics |
-| `appshot.presets` | Manage App Store presets |
-| `appshot.localize` | AI-powered caption translation |
-| `appshot.languages` | Discover available translations |
-| `appshot.export` | Export for Fastlane |
-| `appshot.clean` | Remove generated files |
+| `appshot_projectInfo` | Get project metadata (devices, languages, config) |
+| `appshot_init` | Initialize new project structure |
+| `appshot_build` | Generate final screenshots |
+| `appshot_frame` | Apply device frames only (transparent background) |
+| `appshot_captions` | Read/write caption text, auto-generate from filenames |
+| `appshot_gradients` | List/apply gradient presets |
+| `appshot_backgrounds` | Configure background images |
+| `appshot_fonts` | List/validate available fonts |
+| `appshot_config` | Modify device-specific settings |
+| `appshot_validate` | Check App Store compliance |
+| `appshot_specs` | View App Store specifications |
+| `appshot_doctor` | Run system diagnostics |
+| `appshot_presets` | Manage App Store presets |
+| `appshot_localize` | AI-powered caption translation |
+| `appshot_languages` | Discover available translations |
+| `appshot_export` | Export for Fastlane |
+| `appshot_clean` | Remove generated files |
 
 ### Example: Agent Workflow
 
@@ -1991,11 +1991,11 @@ appshot mcp
 
 **Tools exposed:**
 
-- `appshot.projectInfo` – Returns `appshot.json` metadata (devices, languages, templates).
-- `appshot.doctor` – Runs diagnostics and returns console output.
-- `appshot.build` – Wraps `appshot build` with options for devices, languages, and rendering flags.
-- `appshot.frame` – Batch frames screenshots (including `--frame-tone neutral` support).
-- `appshot.export` – Runs the Fastlane export pipeline.
+- `appshot_projectInfo` – Returns `appshot_json` metadata (devices, languages, templates).
+- `appshot_doctor` – Runs diagnostics and returns console output.
+- `appshot_build` – Wraps `appshot build` with options for devices, languages, and rendering flags.
+- `appshot_frame` – Batch frames screenshots (including `--frame-tone neutral` support).
+- `appshot_export` – Runs the Fastlane export pipeline.
 
 The server uses the stdio transport, so you can register it in Anthropic Desktop by pointing at `appshot mcp` (working directory = your Appshot project). The same entry point works for any MCP-compatible agent or automation.
 
@@ -3081,7 +3081,7 @@ For security vulnerabilities, please see [SECURITY.md](SECURITY.md).
 ### NPM Package
 
 - 📦 [appshot-cli on NPM](https://www.npmjs.com/package/appshot-cli)
-- 🔄 Latest version: 1.0.0
+- 🔄 Latest version: 1.0.1
 
 ---
 

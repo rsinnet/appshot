@@ -203,7 +203,7 @@ function registerProjectInfoTool(server: McpServer) {
     configPath: z.string().optional().describe('Path to appshot.json config file')
   });
 
-  server.registerTool('appshot.projectInfo', {
+  server.registerTool('appshot_projectInfo', {
     title: 'Read project configuration',
     description: 'Loads appshot.json and returns device + language metadata',
     inputSchema,
@@ -240,7 +240,7 @@ function registerProjectInfoTool(server: McpServer) {
 }
 
 function registerDoctorTool(server: McpServer) {
-  server.registerTool('appshot.doctor', {
+  server.registerTool('appshot_doctor', {
     title: 'Run doctor checks',
     description: 'Runs appshot doctor to validate the current project'
   }, async () => {
@@ -270,7 +270,7 @@ function registerBuildTool(server: McpServer) {
     concurrency: z.number().int().positive().optional().describe('Number of parallel builds')
   });
 
-  server.registerTool('appshot.build', {
+  server.registerTool('appshot_build', {
     title: 'Run appshot build',
     description: 'Generates screenshots for the configured devices and languages',
     inputSchema
@@ -309,7 +309,7 @@ function registerFrameTool(server: McpServer) {
     frameTone: z.enum(['original', 'neutral']).optional().describe('Frame color tone')
   });
 
-  server.registerTool('appshot.frame', {
+  server.registerTool('appshot_frame', {
     title: 'Apply device frames',
     description: 'Wraps the frame CLI for MCP clients',
     inputSchema
@@ -339,7 +339,7 @@ function registerExportTool(server: McpServer) {
     configPath: z.string().optional().describe('Path to appshot.json config file')
   });
 
-  server.registerTool('appshot.export', {
+  server.registerTool('appshot_export', {
     title: 'Export screenshots',
     description: 'Runs appshot export fastlane with optional filters',
     inputSchema
@@ -356,7 +356,7 @@ function registerInitTool(server: McpServer) {
     projectDir: z.string().optional().describe('Directory to initialize the project in')
   });
 
-  server.registerTool('appshot.init', {
+  server.registerTool('appshot_init', {
     title: 'Initialize project',
     description: 'Scaffold a new appshot project with default configuration',
     inputSchema
@@ -376,7 +376,7 @@ function registerSpecsTool(server: McpServer) {
     required: z.boolean().optional().describe('Show only required App Store presets')
   });
 
-  server.registerTool('appshot.specs', {
+  server.registerTool('appshot_specs', {
     title: 'App Store specifications',
     description: 'Get Apple App Store screenshot requirements and specifications (returns JSON)',
     inputSchema
@@ -393,7 +393,7 @@ function registerValidateTool(server: McpServer) {
     fix: z.boolean().optional().describe('Suggest fixes for invalid screenshots')
   });
 
-  server.registerTool('appshot.validate', {
+  server.registerTool('appshot_validate', {
     title: 'Validate screenshots',
     description: 'Validate screenshots against App Store requirements (returns JSON)',
     inputSchema
@@ -413,7 +413,7 @@ function registerCleanTool(server: McpServer) {
     configPath: z.string().optional().describe('Path to appshot config file or project directory')
   });
 
-  server.registerTool('appshot.clean', {
+  server.registerTool('appshot_clean', {
     title: 'Clean generated files',
     description: 'Remove generated screenshots and optionally clear caches (auto-confirms)',
     inputSchema
@@ -440,7 +440,7 @@ function registerLocalizeTool(server: McpServer) {
     overwrite: z.boolean().optional().describe('Overwrite existing translations')
   });
 
-  server.registerTool('appshot.localize', {
+  server.registerTool('appshot_localize', {
     title: 'Batch translate captions',
     description: 'Translate captions to multiple languages using AI. Requires OPENAI_API_KEY environment variable.',
     inputSchema
@@ -460,7 +460,7 @@ function registerPresetsTool(server: McpServer) {
     outputFile: z.string().optional().describe('Output file for generated config')
   });
 
-  server.registerTool('appshot.presets', {
+  server.registerTool('appshot_presets', {
     title: 'List presets',
     description: 'List available App Store presets and generate configuration (returns JSON)',
     inputSchema
@@ -477,7 +477,7 @@ function registerLanguagesTool(server: McpServer) {
     configPath: z.string().optional().describe('Path to appshot config file or project directory')
   });
 
-  server.registerTool('appshot.languages', {
+  server.registerTool('appshot_languages', {
     title: 'Discover available languages',
     description: 'Scans caption files to discover which languages have translations available',
     inputSchema
@@ -539,7 +539,7 @@ function registerConfigTool(server: McpServer) {
     marginBottom: z.number().optional().describe('Bottom margin for caption box')
   });
 
-  server.registerTool('appshot.config', {
+  server.registerTool('appshot_config', {
     title: 'Update device configuration',
     description: 'Modifies device-specific settings in the appshot config file',
     inputSchema
@@ -658,7 +658,7 @@ function registerCaptionsTool(server: McpServer) {
     overwrite: z.boolean().optional().describe('Overwrite existing captions (for auto action, default: false)')
   });
 
-  server.registerTool('appshot.captions', {
+  server.registerTool('appshot_captions', {
     title: 'Manage captions',
     description: 'Read and write caption text for screenshots',
     inputSchema
@@ -953,7 +953,7 @@ function registerGradientsTool(server: McpServer) {
     preset: z.string().optional().describe('Preset ID to apply (required for apply action)')
   });
 
-  server.registerTool('appshot.gradients', {
+  server.registerTool('appshot_gradients', {
     title: 'Manage gradients',
     description: 'List available gradient presets and apply them to config',
     inputSchema
@@ -1065,7 +1065,7 @@ function registerBackgroundsTool(server: McpServer) {
     fit: z.enum(['cover', 'contain', 'fill', 'scale-down']).optional().describe('Background fit mode (for set action)')
   });
 
-  server.registerTool('appshot.backgrounds', {
+  server.registerTool('appshot_backgrounds', {
     title: 'Manage backgrounds',
     description: 'Configure background images for screenshots',
     inputSchema
@@ -1208,7 +1208,7 @@ function registerFontsTool(server: McpServer) {
     font: z.string().optional().describe('Font name to validate (required for validate action)')
   });
 
-  server.registerTool('appshot.fonts', {
+  server.registerTool('appshot_fonts', {
     title: 'Manage fonts',
     description: 'List available fonts and check font availability',
     inputSchema
@@ -1242,7 +1242,7 @@ function registerTemplateTool(server: McpServer) {
     projectDir: z.string().optional().describe('Project directory to apply template to')
   });
 
-  server.registerTool('appshot.template', {
+  server.registerTool('appshot_template', {
     title: 'Apply template',
     description: 'Apply professional screenshot templates for quick App Store setup',
     inputSchema
@@ -1265,7 +1265,7 @@ function registerQuickstartTool(server: McpServer) {
     projectDir: z.string().optional().describe('Directory to initialize the project in')
   });
 
-  server.registerTool('appshot.quickstart', {
+  server.registerTool('appshot_quickstart', {
     title: 'Quickstart',
     description: 'Get started with App Store screenshots in seconds - initializes project, applies template, sets up captions',
     inputSchema

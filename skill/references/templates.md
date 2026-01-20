@@ -27,7 +27,7 @@
 - **Best for:** Consumer apps, social apps, general-purpose
 
 ```
-appshot.template with template: "modern"
+appshot_template with template: "modern"
 ```
 
 ---
@@ -42,7 +42,7 @@ appshot.template with template: "modern"
 - **Best for:** Health apps, wellness, lifestyle
 
 ```
-appshot.template with template: "minimal"
+appshot_template with template: "minimal"
 ```
 
 ---
@@ -57,7 +57,7 @@ appshot.template with template: "minimal"
 - **Best for:** Finance apps, security, premium features
 
 ```
-appshot.template with template: "bold"
+appshot_template with template: "bold"
 ```
 
 ---
@@ -72,7 +72,7 @@ appshot.template with template: "bold"
 - **Best for:** Developer tools, CLI apps, open source projects
 
 ```
-appshot.template with template: "nerdy"
+appshot_template with template: "nerdy"
 ```
 
 **Note:** Place a grid/terminal background image at `screenshots/iphone/background.png` for best results.
@@ -89,7 +89,7 @@ appshot.template with template: "nerdy"
 - **Best for:** Luxury apps, premium services, professional tools
 
 ```
-appshot.template with template: "elegant"
+appshot_template with template: "elegant"
 ```
 
 ---
@@ -104,7 +104,7 @@ appshot.template with template: "elegant"
 - **Best for:** Apps with strong visual branding, custom marketing assets
 
 ```
-appshot.template with template: "showcase"
+appshot_template with template: "showcase"
 ```
 
 **Tip:** Add your branded background to `screenshots/iphone/background.png`
@@ -121,7 +121,7 @@ appshot.template with template: "showcase"
 - **Best for:** Games, kids apps, entertainment, social
 
 ```
-appshot.template with template: "playful"
+appshot_template with template: "playful"
 ```
 
 ---
@@ -136,7 +136,7 @@ appshot.template with template: "playful"
 - **Best for:** Business apps, B2B, enterprise, productivity
 
 ```
-appshot.template with template: "corporate"
+appshot_template with template: "corporate"
 ```
 
 ---
@@ -145,13 +145,13 @@ appshot.template with template: "corporate"
 
 ```
 # Apply a template
-appshot.template with template: "nerdy"
+appshot_template with template: "nerdy"
 
 # Preview without applying
-appshot.template with preview: "modern"
+appshot_template with preview: "modern"
 
 # List all templates
-appshot.template with list: true
+appshot_template with list: true
 ```
 
 ## Customizing After Template
@@ -160,11 +160,11 @@ Templates set a starting point. Customize further with:
 
 ```
 # Change gradient
-appshot.gradients with action: "apply", preset: "sunset"
+appshot_gradients with action: "apply", preset: "sunset"
 
 # Adjust device positioning
-appshot.config with device: "iphone", frameScale: 0.85, framePosition: 30
+appshot_config with device: "iphone", frameScale: 0.85, framePosition: 30
 
 # Change caption position
-appshot.config with device: "iphone", captionPosition: "below"
+appshot_config with device: "iphone", captionPosition: "below"
 ```

@@ -13,29 +13,29 @@ AppShot generates App Store-ready screenshots with device frames, gradient backg
 
 | Tool | Purpose |
 |------|---------|
-| `appshot.init` | Initialize new project structure |
-| `appshot.captions` | Read/write/auto-generate caption text |
-| `appshot.gradients` | List/apply gradient presets |
-| `appshot.backgrounds` | Configure background images |
-| `appshot.fonts` | List/validate available fonts |
-| `appshot.config` | Modify device-specific settings |
-| `appshot.build` | Generate final screenshots |
-| `appshot.validate` | Check App Store compliance |
-| `appshot.specs` | View App Store specifications |
-| `appshot.doctor` | System diagnostics |
-| `appshot.presets` | App Store preset configurations |
-| `appshot.localize` | AI-powered caption translation |
-| `appshot.languages` | Discover available translations |
-| `appshot.frame` | Apply device frames only |
-| `appshot.export` | Export for Fastlane |
-| `appshot.clean` | Remove generated files |
+| `appshot_init` | Initialize new project structure |
+| `appshot_captions` | Read/write/auto-generate caption text |
+| `appshot_gradients` | List/apply gradient presets |
+| `appshot_backgrounds` | Configure background images |
+| `appshot_fonts` | List/validate available fonts |
+| `appshot_config` | Modify device-specific settings |
+| `appshot_build` | Generate final screenshots |
+| `appshot_validate` | Check App Store compliance |
+| `appshot_specs` | View App Store specifications |
+| `appshot_doctor` | System diagnostics |
+| `appshot_presets` | App Store preset configurations |
+| `appshot_localize` | AI-powered caption translation |
+| `appshot_languages` | Discover available translations |
+| `appshot_frame` | Apply device frames only |
+| `appshot_export` | Export for Fastlane |
+| `appshot_clean` | Remove generated files |
 
 ## Project Workflow
 
 ### 1. Initialize Project
 
 ```
-appshot.init with force: true
+appshot_init with force: true
 ```
 
 Creates the project structure:
@@ -59,131 +59,131 @@ final/                   # Generated output
 
 List existing captions:
 ```
-appshot.captions with device: "iphone", action: "list"
+appshot_captions with device: "iphone", action: "list"
 ```
 
 Set a caption:
 ```
-appshot.captions with device: "iphone", action: "set", filename: "home.png", caption: "Welcome Home", language: "en"
+appshot_captions with device: "iphone", action: "set", filename: "home.png", caption: "Welcome Home", language: "en"
 ```
 
 Auto-generate captions from filenames:
 ```
-appshot.captions with device: "iphone", action: "auto"
+appshot_captions with device: "iphone", action: "auto"
 ```
 This converts filenames like `home-screen.png` → "Home Screen"
 
 Bulk set multiple captions:
 ```
-appshot.captions with device: "iphone", action: "bulk-set", captions: "{\"home.png\": \"Welcome\", \"settings.png\": \"Settings\"}"
+appshot_captions with device: "iphone", action: "bulk-set", captions: "{\"home.png\": \"Welcome\", \"settings.png\": \"Settings\"}"
 ```
 
 Add translations:
 ```
-appshot.captions with device: "iphone", action: "set", filename: "home.png", caption: "Bienvenido", language: "es"
+appshot_captions with device: "iphone", action: "set", filename: "home.png", caption: "Bienvenido", language: "es"
 ```
 
 ### 3. Apply Styling
 
 List gradient presets:
 ```
-appshot.gradients with action: "list"
+appshot_gradients with action: "list"
 ```
 
 Apply a gradient:
 ```
-appshot.gradients with action: "apply", preset: "ocean"
+appshot_gradients with action: "apply", preset: "ocean"
 ```
 
 Set background image:
 ```
-appshot.backgrounds with action: "set", image: "./bg.jpg", fit: "cover"
+appshot_backgrounds with action: "set", image: "./bg.jpg", fit: "cover"
 ```
 
 Configure device settings:
 ```
-appshot.config with device: "iphone", frameScale: 0.85, captionPosition: "above"
+appshot_config with device: "iphone", frameScale: 0.85, captionPosition: "above"
 ```
 
 ### 4. Build Screenshots
 
 Build all devices and languages:
 ```
-appshot.build
+appshot_build
 ```
 
 Build specific devices:
 ```
-appshot.build with devices: ["iphone", "ipad"]
+appshot_build with devices: ["iphone", "ipad"]
 ```
 
 Build with App Store presets:
 ```
-appshot.build with presets: ["iphone-6-9", "ipad-13"]
+appshot_build with presets: ["iphone-6-9", "ipad-13"]
 ```
 
 ### 5. Frame Only (No Background)
 
 Apply device frames without gradients or captions:
 ```
-appshot.frame with input: "./screenshots/iphone"
+appshot_frame with input: "./screenshots/iphone"
 ```
 
 Frame with output directory:
 ```
-appshot.frame with input: "./screenshots/iphone", outputDir: "./framed"
+appshot_frame with input: "./screenshots/iphone", outputDir: "./framed"
 ```
 
 Frame recursively:
 ```
-appshot.frame with input: "./screenshots", recursive: true
+appshot_frame with input: "./screenshots", recursive: true
 ```
 
 Preview what would be framed:
 ```
-appshot.frame with input: "./screenshots/iphone", dryRun: true
+appshot_frame with input: "./screenshots/iphone", dryRun: true
 ```
 
 ### 6. Validate
 
 Check App Store compliance:
 ```
-appshot.validate
+appshot_validate
 ```
 
 ## Common Scenarios
 
 ### New iPhone-Only Project
 
-1. `appshot.init` with `force: true`
+1. `appshot_init` with `force: true`
 2. User adds screenshots to `screenshots/iphone/`
-3. `appshot.captions` - set captions for each screenshot
-4. `appshot.gradients` - apply preferred gradient
-5. `appshot.build` with `devices: ["iphone"]`
+3. `appshot_captions` - set captions for each screenshot
+4. `appshot_gradients` - apply preferred gradient
+5. `appshot_build` with `devices: ["iphone"]`
 
 ### Multi-Language App Store Submission
 
-1. `appshot.init` with `force: true`
-2. `appshot.captions` - add English captions
-3. `appshot.localize` with `languages: ["es", "fr", "de", "ja"]`
-4. `appshot.build` with `languages: ["en", "es", "fr", "de", "ja"]`
-5. `appshot.validate`
+1. `appshot_init` with `force: true`
+2. `appshot_captions` - add English captions
+3. `appshot_localize` with `languages: ["es", "fr", "de", "ja"]`
+4. `appshot_build` with `languages: ["en", "es", "fr", "de", "ja"]`
+5. `appshot_validate`
 
 ### Quick Styling Update
 
-1. `appshot.gradients` with `action: "list"` to see options
-2. `appshot.gradients` with `action: "apply", preset: "sunset"`
-3. `appshot.build`
+1. `appshot_gradients` with `action: "list"` to see options
+2. `appshot_gradients` with `action: "apply", preset: "sunset"`
+3. `appshot_build`
 
 ### Quick Auto-Caption Project
 
 When filenames are descriptive (e.g., `home-screen.png`, `settings_page.png`):
 
-1. `appshot.init` with `force: true`
+1. `appshot_init` with `force: true`
 2. User adds screenshots to `screenshots/iphone/`
-3. `appshot.captions` with `device: "iphone", action: "auto"`
-4. `appshot.gradients` with `action: "apply", preset: "ocean"`
-5. `appshot.build` with `devices: ["iphone"]`
+3. `appshot_captions` with `device: "iphone", action: "auto"`
+4. `appshot_gradients` with `action: "apply", preset: "ocean"`
+5. `appshot_build` with `devices: ["iphone"]`
 
 Captions are auto-generated from filenames (hyphens/underscores become spaces, title case applied).
 
@@ -191,7 +191,7 @@ Captions are auto-generated from filenames (hyphens/underscores become spaces, t
 
 For quick device mockups without backgrounds or captions:
 
-1. `appshot.frame` with `input: "./screenshots/iphone", outputDir: "./framed"`
+1. `appshot_frame` with `input: "./screenshots/iphone", outputDir: "./framed"`
 
 Output has transparent background - perfect for presentations, design comps, or overlaying on custom backgrounds.
 
