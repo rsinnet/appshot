@@ -213,7 +213,11 @@ function registerProjectInfoTool(server: McpServer) {
       languages: z.array(z.string()).optional(),
       summary: z.record(z.string(), z.any()),
       config: z.record(z.string(), z.any())
-    })
+    }),
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false
+    }
   }, async (args) => {
     const { path: resolvedPath, config } = await readAppshotConfig(args.configPath);
     const devices = Object.keys(config.devices ?? {});
@@ -242,7 +246,11 @@ function registerProjectInfoTool(server: McpServer) {
 function registerDoctorTool(server: McpServer) {
   server.registerTool('appshot_doctor', {
     title: 'Run doctor checks',
-    description: 'Runs appshot doctor to validate the current project'
+    description: 'Runs appshot doctor to validate the current project',
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false
+    }
   }, async () => {
     const result = await runAppshotCli(['doctor']);
     return cliResultToToolResponse('Doctor', result);
@@ -273,7 +281,11 @@ function registerBuildTool(server: McpServer) {
   server.registerTool('appshot_build', {
     title: 'Run appshot build',
     description: 'Generates screenshots for the configured devices and languages',
-    inputSchema
+    inputSchema,
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: true
+    }
   }, async (args) => {
     const typedArgs = args as BuildToolArgs;
     let cwd: string | undefined;
@@ -312,7 +324,11 @@ function registerFrameTool(server: McpServer) {
   server.registerTool('appshot_frame', {
     title: 'Apply device frames',
     description: 'Wraps the frame CLI for MCP clients',
-    inputSchema
+    inputSchema,
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: true
+    }
   }, async (args) => {
     const frameArgs = createFrameArgs(args as FrameToolArgs);
     const result = await runAppshotCli(frameArgs);
@@ -342,7 +358,11 @@ function registerExportTool(server: McpServer) {
   server.registerTool('appshot_export', {
     title: 'Export screenshots',
     description: 'Runs appshot export fastlane with optional filters',
-    inputSchema
+    inputSchema,
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: true
+    }
   }, async (args) => {
     const exportArgs = createExportArgs(args as ExportToolArgs);
     const result = await runAppshotCli(exportArgs);
@@ -359,7 +379,11 @@ function registerInitTool(server: McpServer) {
   server.registerTool('appshot_init', {
     title: 'Initialize project',
     description: 'Scaffold a new appshot project with default configuration',
-    inputSchema
+    inputSchema,
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: true
+    }
   }, async (args) => {
     const typedArgs = args as InitToolArgs & { projectDir?: string };
     const cwd = typedArgs.projectDir;
@@ -379,7 +403,11 @@ function registerSpecsTool(server: McpServer) {
   server.registerTool('appshot_specs', {
     title: 'App Store specifications',
     description: 'Get Apple App Store screenshot requirements and specifications (returns JSON)',
-    inputSchema
+    inputSchema,
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false
+    }
   }, async (args) => {
     const specsArgs = createSpecsArgs(args as SpecsToolArgs);
     const result = await runAppshotCli(specsArgs);
@@ -396,7 +424,11 @@ function registerValidateTool(server: McpServer) {
   server.registerTool('appshot_validate', {
     title: 'Validate screenshots',
     description: 'Validate screenshots against App Store requirements (returns JSON)',
-    inputSchema
+    inputSchema,
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false
+    }
   }, async (args) => {
     const validateArgs = createValidateArgs(args as ValidateToolArgs);
     const result = await runAppshotCli(validateArgs);
@@ -416,7 +448,11 @@ function registerCleanTool(server: McpServer) {
   server.registerTool('appshot_clean', {
     title: 'Clean generated files',
     description: 'Remove generated screenshots and optionally clear caches (auto-confirms)',
-    inputSchema
+    inputSchema,
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: true
+    }
   }, async (args) => {
     const typedArgs = args as CleanToolArgs & { configPath?: string };
     let cwd: string | undefined;
@@ -443,7 +479,11 @@ function registerLocalizeTool(server: McpServer) {
   server.registerTool('appshot_localize', {
     title: 'Batch translate captions',
     description: 'Translate captions to multiple languages using AI. Requires OPENAI_API_KEY environment variable.',
-    inputSchema
+    inputSchema,
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: true
+    }
   }, async (args) => {
     const localizeArgs = createLocalizeArgs(args as LocalizeToolArgs);
     const result = await runAppshotCli(localizeArgs);
@@ -463,7 +503,11 @@ function registerPresetsTool(server: McpServer) {
   server.registerTool('appshot_presets', {
     title: 'List presets',
     description: 'List available App Store presets and generate configuration (returns JSON)',
-    inputSchema
+    inputSchema,
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: true
+    }
   }, async (args) => {
     const presetsArgs = createPresetsArgs(args as PresetsToolArgs);
     const result = await runAppshotCli(presetsArgs);
@@ -480,7 +524,11 @@ function registerLanguagesTool(server: McpServer) {
   server.registerTool('appshot_languages', {
     title: 'Discover available languages',
     description: 'Scans caption files to discover which languages have translations available',
-    inputSchema
+    inputSchema,
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false
+    }
   }, async (args) => {
     let projectDir = process.cwd();
     if (args.configPath) {
@@ -542,7 +590,11 @@ function registerConfigTool(server: McpServer) {
   server.registerTool('appshot_config', {
     title: 'Update device configuration',
     description: 'Modifies device-specific settings in the appshot config file',
-    inputSchema
+    inputSchema,
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: true
+    }
   }, async (args) => {
     let configFile: string;
     if (args.configPath) {
@@ -661,7 +713,11 @@ function registerCaptionsTool(server: McpServer) {
   server.registerTool('appshot_captions', {
     title: 'Manage captions',
     description: 'Read and write caption text for screenshots',
-    inputSchema
+    inputSchema,
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: true
+    }
   }, async (args) => {
     let projectDir = process.cwd();
     if (args.configPath) {
@@ -956,7 +1012,11 @@ function registerGradientsTool(server: McpServer) {
   server.registerTool('appshot_gradients', {
     title: 'Manage gradients',
     description: 'List available gradient presets and apply them to config',
-    inputSchema
+    inputSchema,
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: true
+    }
   }, async (args) => {
     if (args.action === 'list') {
       const presets = args.category
@@ -1068,7 +1128,11 @@ function registerBackgroundsTool(server: McpServer) {
   server.registerTool('appshot_backgrounds', {
     title: 'Manage backgrounds',
     description: 'Configure background images for screenshots',
-    inputSchema
+    inputSchema,
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: true
+    }
   }, async (args) => {
     let configFile: string;
     if (args.configPath) {
@@ -1211,7 +1275,11 @@ function registerFontsTool(server: McpServer) {
   server.registerTool('appshot_fonts', {
     title: 'Manage fonts',
     description: 'List available fonts and check font availability',
-    inputSchema
+    inputSchema,
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false
+    }
   }, async (args) => {
     if (args.action === 'validate' && !args.font) {
       return {
@@ -1245,7 +1313,11 @@ function registerTemplateTool(server: McpServer) {
   server.registerTool('appshot_template', {
     title: 'Apply template',
     description: 'Apply professional screenshot templates for quick App Store setup',
-    inputSchema
+    inputSchema,
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: true
+    }
   }, async (args) => {
     const typedArgs = args as TemplateToolArgs & { projectDir?: string };
     const cwd = typedArgs.projectDir;
@@ -1268,7 +1340,11 @@ function registerQuickstartTool(server: McpServer) {
   server.registerTool('appshot_quickstart', {
     title: 'Quickstart',
     description: 'Get started with App Store screenshots in seconds - initializes project, applies template, sets up captions',
-    inputSchema
+    inputSchema,
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: true
+    }
   }, async (args) => {
     const typedArgs = args as QuickstartToolArgs & { projectDir?: string };
     const cwd = typedArgs.projectDir;

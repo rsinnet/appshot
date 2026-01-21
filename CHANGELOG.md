@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.3] - 2025-01-21
+
+### ✨ Added
+- **MCP Tool Annotations:** Added `readOnlyHint` and `destructiveHint` annotations to all 18 MCP tools per MCP Directory Policy
+  - Read-only tools (6): `projectInfo`, `doctor`, `specs`, `validate`, `languages`, `fonts`
+  - Destructive tools (12): `build`, `frame`, `export`, `init`, `clean`, `localize`, `presets`, `config`, `captions`, `gradients`, `backgrounds`, `template`, `quickstart`
+
 ## [1.0.2] - 2025-01-21
 
 ### 🐛 Fixed
