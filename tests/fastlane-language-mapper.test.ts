@@ -32,6 +32,12 @@ describe('fastlane-language-mapper', () => {
     expect(mapToFastlaneCode('unknown')).toBe('unknown');
   });
 
+  it('maps Latin American Spanish variants to es-MX', () => {
+    expect(mapToFastlaneCode('es-419')).toBe('es-MX');
+    expect(mapToFastlaneCode('es-latam')).toBe('es-MX');
+    expect(mapToFastlaneCode('es-la')).toBe('es-MX');
+  });
+
   it('returns mapped values in insertion order', async () => {
     const languages = ['en', 'es', 'fr'];
     const map = await mapLanguages(languages);

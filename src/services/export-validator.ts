@@ -1,6 +1,22 @@
 import { promises as fs } from 'fs';
 import path from 'path';
+import { execFileSync } from 'child_process';
 import { FASTLANE_LANGUAGES } from './fastlane-language-mapper.js';
+
+/**
+ * Find the git repository root, or null if not in a git repo
+ */
+function findGitRoot(): string | null {
+  try {
+    const result = execFileSync('git', ['rev-parse', '--show-toplevel'], {
+      encoding: 'utf-8',
+      stdio: ['pipe', 'pipe', 'pipe']
+    });
+    return result.trim();
+  } catch {
+    return null;
+  }
+}
 
 export interface ValidationResult {
   valid: boolean;
@@ -249,11 +265,27 @@ export function isSafeToClean(targetPath: string): boolean {
     return false;
   }
 
-  // Check if it's in the project directory
-  const projectRoot = process.cwd();
-  if (!normalizedPath.startsWith(projectRoot)) {
-    return false;
+  // Helper to create path prefix for startsWith check
+  // Handles filesystem root (/ or C:\) which already ends with separator
+  const makePathPrefix = (dir: string): string => {
+    return dir.endsWith(path.sep) ? dir : dir + path.sep;
+  };
+
+  // Check if it's in the project directory or git repo
+  // First try git root (allows ../fastlane/screenshots from subdirectory)
+  const gitRoot = findGitRoot();
+  // Normalize gitRoot to handle Windows where git returns forward slashes (C:/repo)
+  // but path.resolve uses backslashes (C:\repo)
+  const normalizedGitRoot = gitRoot ? path.normalize(gitRoot) : null;
+  if (normalizedGitRoot && normalizedPath.startsWith(makePathPrefix(normalizedGitRoot))) {
+    return true;
   }
 
-  return true;
+  // Fall back to CWD check for non-git projects
+  const projectRoot = process.cwd();
+  if (normalizedPath.startsWith(makePathPrefix(projectRoot))) {
+    return true;
+  }
+
+  return false;
 }

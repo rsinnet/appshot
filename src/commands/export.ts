@@ -270,18 +270,64 @@ ${pc.bold('Integration with Fastlane:')}
 
         // Clean output directory if requested
         if (opts.clean) {
-          if (!isSafeToClean(outputPath)) {
-            console.error(pc.red('Error: Refusing to clean unsafe directory:'), outputPath);
-            process.exit(1);
-          }
+          // Helper to find and clean broken symlinks in path ancestry
+          const cleanBrokenSymlinks = async (targetPath: string): Promise<boolean> => {
+            const resolvedPath = path.resolve(targetPath);
+            const { root } = path.parse(resolvedPath);
+            // Get path parts after the root (handles Windows drive letters like C:\)
+            const relativePart = resolvedPath.slice(root.length);
+            const parts = relativePart.split(path.sep).filter(Boolean);
+            let currentPath: string = root;
 
+            for (const part of parts) {
+              currentPath = path.join(currentPath, part);
+              try {
+                const stat = await fs.lstat(currentPath);
+                if (stat.isSymbolicLink()) {
+                  // Check if symlink target exists
+                  try {
+                    await fs.stat(currentPath); // Follows symlink
+                  } catch {
+                    // Broken symlink found
+                    if (!isSafeToClean(currentPath)) {
+                      console.error(pc.red('Error: Refusing to clean unsafe path:'), currentPath);
+                      process.exit(1);
+                    }
+                    await fs.rm(currentPath, { force: true });
+                    if (!opts.json) {
+                      console.log(pc.dim('Cleaned broken symlink:'), currentPath);
+                    }
+                    return true;
+                  }
+                }
+              } catch {
+                // Path component doesn't exist - nothing more to check
+                break;
+              }
+            }
+            return false;
+          };
+
+          // First check for and clean any broken symlinks in the path
+          await cleanBrokenSymlinks(outputPath);
+
+          // Now check if the output path itself exists and clean it
           try {
+            await fs.lstat(outputPath);
+
+            // Path exists (directory, file, or symlink), check if safe to clean
+            if (!isSafeToClean(outputPath)) {
+              console.error(pc.red('Error: Refusing to clean unsafe directory:'), outputPath);
+              console.error(pc.dim('  Path must be within the current project directory'));
+              process.exit(1);
+            }
+
             await fs.rm(outputPath, { recursive: true, force: true });
             if (!opts.json) {
               console.log(pc.dim('Cleaned output directory'));
             }
           } catch {
-            // Directory might not exist
+            // Path doesn't exist - nothing to clean, continue silently
           }
         }
 
@@ -402,9 +448,11 @@ ${pc.bold('Integration with Fastlane:')}
           console.log('\n' + pc.cyan('Ready for upload:'));
           console.log(pc.dim(`  cd ${path.relative(process.cwd(), path.dirname(outputPath))} && fastlane deliver`));
 
-          console.log('\n' + pc.yellow('⚠️  Note about Fastlane:'));
-          console.log(pc.dim('  Fastlane\'s deliver may have issues with nested directories.'));
-          console.log(pc.dim('  If uploads fail, try flattening the structure or use a staging approach.'));
+          if (!opts.flatten) {
+            console.log('\n' + pc.yellow('⚠️  Note about Fastlane:'));
+            console.log(pc.dim('  Fastlane\'s deliver may have issues with nested directories.'));
+            console.log(pc.dim('  If uploads fail, try flattening the structure or use a staging approach.'));
+          }
 
           if (!opts.generateConfig) {
             console.log('\n' + pc.dim('Tip: Use --generate-config to create Fastlane configuration files'));
