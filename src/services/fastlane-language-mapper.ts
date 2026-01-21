@@ -62,6 +62,9 @@ export const DEFAULT_MAPPINGS: Record<string, string> = {
   'en-au': 'en-AU',
   'en-ca': 'en-CA',
   'es-mx': 'es-MX',
+  'es-419': 'es-MX',    // BCP-47 Latin American Spanish
+  'es-latam': 'es-MX',  // Common informal code
+  'es-la': 'es-MX',     // Another informal variant
   'fr-ca': 'fr-CA',
   'pt-br': 'pt-BR',
 

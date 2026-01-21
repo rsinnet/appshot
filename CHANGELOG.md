@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.2] - 2025-01-21
+
+### 🐛 Fixed
+- **Language Mapping:** Added `es-419` (BCP-47 Latin American Spanish), `es-latam`, and `es-la` to default Fastlane language mappings, all mapping to `es-MX`
+- **Broken Symlink Handling:** Fixed `--clean` option in export command to properly detect and remove broken symlinks in ancestor directories
+- **Windows Path Handling:** Fixed symlink cleanup to correctly handle Windows drive roots (e.g., `C:\`) by using `path.parse().root` instead of `path.sep`
+- **Windows Git Root:** Normalized git root path in safety checks to handle forward slashes returned by git on Windows
+- **Filesystem Root Safety:** Fixed path prefix check in `isSafeToClean` to avoid double separators when repo/CWD is at filesystem root
+
 ## [1.0.1] - 2025-01-20
 
 ### 🐛 Fixed

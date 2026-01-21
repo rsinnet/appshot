@@ -138,4 +138,33 @@ describe('appshot export CLI', { timeout: 60000 }, () => {
     const exportDir = path.join(testDir, 'fastlane');
     await expect(fs.access(exportDir)).rejects.toThrow();
   });
+
+  it('handles broken symlinks in output directory with --clean', async () => {
+    await createScreenshot('iphone', 'en', 'app.png');
+
+    // Create a target directory and symlink to it
+    const targetDir = path.join(testDir, 'symlink-target');
+    const outputDir = path.join(testDir, 'fastlane');
+    await fs.mkdir(targetDir, { recursive: true });
+    await fs.symlink(targetDir, outputDir);
+
+    // Remove the target, leaving a broken symlink
+    await fs.rm(targetDir, { recursive: true, force: true });
+
+    // Verify the symlink is broken (lstat succeeds, but access fails)
+    const stat = await fs.lstat(outputDir);
+    expect(stat.isSymbolicLink()).toBe(true);
+    await expect(fs.access(outputDir)).rejects.toThrow();
+
+    // Export with --clean should handle the broken symlink
+    const { stdout } = await runExport('--clean --json');
+    const result = JSON.parse(stdout);
+
+    expect(result.success).toBe(true);
+    expect(result.processed).toBe(1);
+
+    // Output directory should now exist as a real directory
+    const newStat = await fs.lstat(path.join(outputDir, 'screenshots'));
+    expect(newStat.isDirectory()).toBe(true);
+  });
 });
