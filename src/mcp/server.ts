@@ -8,6 +8,7 @@ import { promises as fs } from 'fs';
 import { APP_VERSION } from '../version.js';
 import { detectLanguagesFromCaptions } from '../utils/language.js';
 import { filenameToCaption } from '../utils/filename-caption.js';
+import { detectConfigVersion } from '../utils/config-version.js';
 import {
   createBuildArgs,
   createFrameArgs,
@@ -21,6 +22,7 @@ import {
   createFontsArgs,
   createTemplateArgs,
   createQuickstartArgs,
+  createWizardArgs,
   type BuildToolArgs,
   type FrameToolArgs,
   type ExportToolArgs,
@@ -32,7 +34,8 @@ import {
   type PresetsToolArgs,
   type FontsToolArgs,
   type TemplateToolArgs,
-  type QuickstartToolArgs
+  type QuickstartToolArgs,
+  type WizardToolArgs
 } from './cli-options.js';
 import {
   gradientPresets,
@@ -167,6 +170,8 @@ export async function startMcpServer() {
     version: APP_VERSION
   });
 
+  const defaultConfigVersion = await detectDefaultConfigVersion();
+
   registerProjectInfoTool(server);
   registerDoctorTool(server);
   registerBuildTool(server);
@@ -179,13 +184,14 @@ export async function startMcpServer() {
   registerLocalizeTool(server);
   registerPresetsTool(server);
   registerLanguagesTool(server);
-  registerConfigTool(server);
+  await registerConfigTool(server, defaultConfigVersion);
   registerCaptionsTool(server);
   registerGradientsTool(server);
   registerBackgroundsTool(server);
   registerFontsTool(server);
   registerTemplateTool(server);
   registerQuickstartTool(server);
+  registerWizardTool(server);
 
   const transport = new StdioServerTransport();
   const cleanup = async () => {
@@ -575,17 +581,43 @@ function registerLanguagesTool(server: McpServer) {
   });
 }
 
-function registerConfigTool(server: McpServer) {
-  const inputSchema = z.object({
+async function detectDefaultConfigVersion(): Promise<1 | 2 | undefined> {
+  try {
+    const { config } = await readAppshotConfig();
+    return detectConfigVersion(config as { version?: number });
+  } catch {
+    return undefined;
+  }
+}
+
+async function registerConfigTool(server: McpServer, defaultConfigVersion?: 1 | 2) {
+  const baseSchema = {
     configPath: z.string().optional().describe('Path to appshot config file or project directory'),
-    device: z.string().describe('Device to configure (iphone/ipad/mac/watch)'),
-    frameScale: z.number().optional().describe('Scale of device frame (0.1-1.5)'),
-    framePosition: z.number().optional().describe('Vertical position of device (0-100, or negative for offset)'),
-    captionPosition: z.enum(['above', 'below', 'overlay']).optional().describe('Caption position relative to device'),
-    captionSize: z.number().optional().describe('Font size for captions'),
-    marginTop: z.number().optional().describe('Top margin for caption box'),
-    marginBottom: z.number().optional().describe('Bottom margin for caption box')
-  });
+    device: z.string().describe('Device to configure (iphone/ipad/mac/watch)')
+  };
+
+  const v2Schema = {
+    layout: z.enum(['header', 'footer', 'screenshot-only']).optional().describe('v2 layout mode'),
+    captionFont: z.string().optional().describe('v2 caption font family'),
+    captionColor: z.string().optional().describe('v2 caption color (hex)'),
+    backgroundGradient: z.array(z.string()).optional().describe('v2 background gradient colors (2-3 hex colors)'),
+    backgroundDirection: z.string().optional().describe('v2 background gradient direction (vertical/horizontal/diagonal)'),
+    backgroundImage: z.string().optional().describe('v2 background image path')
+  };
+
+  const v1Schema = {
+    frameScale: z.number().optional().describe('v1 scale of device frame (0.1-1.5)'),
+    framePosition: z.number().optional().describe('v1 vertical position of device (0-100, or negative for offset)'),
+    captionPosition: z.enum(['above', 'below', 'overlay']).optional().describe('v1 caption position relative to device'),
+    captionSize: z.number().optional().describe('v1 font size for captions'),
+    marginTop: z.number().optional().describe('v1 top margin for caption box'),
+    marginBottom: z.number().optional().describe('v1 bottom margin for caption box')
+  };
+
+  let inputSchema = z.object({ ...baseSchema, ...v2Schema });
+  if (defaultConfigVersion === 1) {
+    inputSchema = inputSchema.extend(v1Schema);
+  }
 
   server.registerTool('appshot_config', {
     title: 'Update device configuration',
@@ -619,6 +651,110 @@ function registerConfigTool(server: McpServer) {
       };
     }
 
+    const v1Args = args as typeof args & {
+      frameScale?: number;
+      framePosition?: number;
+      captionPosition?: 'above' | 'below' | 'overlay';
+      captionSize?: number;
+      marginTop?: number;
+      marginBottom?: number;
+    };
+
+    if ((config as { version?: number }).version === 2) {
+      const hasV1Args = [
+        v1Args.frameScale,
+        v1Args.framePosition,
+        v1Args.captionPosition,
+        v1Args.captionSize,
+        v1Args.marginTop,
+        v1Args.marginBottom
+      ].some((value) => value !== undefined);
+
+      if (hasV1Args) {
+        return {
+          content: [{
+            type: 'text' as const,
+            text: 'v1 layout fields are not supported in v2 configs. Use layout/captionFont/captionColor/backgroundGradient/backgroundDirection/backgroundImage instead.'
+          }],
+          isError: true
+        };
+      }
+
+      const changes: string[] = [];
+      const v2Config = config as {
+        layout?: string;
+        caption?: { font?: string; color?: string };
+        background?: { mode?: string; gradient?: { colors?: string[]; direction?: string }; image?: string };
+      };
+
+      if (args.layout) {
+        v2Config.layout = args.layout;
+        changes.push(`layout: ${args.layout}`);
+      }
+      if (args.captionFont) {
+        v2Config.caption = v2Config.caption || {};
+        v2Config.caption.font = args.captionFont;
+        changes.push(`caption.font: ${args.captionFont}`);
+      }
+      if (args.captionColor) {
+        v2Config.caption = v2Config.caption || {};
+        v2Config.caption.color = args.captionColor;
+        changes.push(`caption.color: ${args.captionColor}`);
+      }
+      if (args.backgroundGradient) {
+        v2Config.background = v2Config.background || {};
+        v2Config.background.mode = 'gradient';
+        v2Config.background.gradient = v2Config.background.gradient || {};
+        v2Config.background.gradient.colors = args.backgroundGradient;
+        changes.push(`background.gradient.colors: ${args.backgroundGradient.join(', ')}`);
+      }
+      if (args.backgroundDirection) {
+        v2Config.background = v2Config.background || {};
+        v2Config.background.mode = 'gradient';
+        v2Config.background.gradient = v2Config.background.gradient || {};
+        v2Config.background.gradient.direction = args.backgroundDirection;
+        changes.push(`background.gradient.direction: ${args.backgroundDirection}`);
+      }
+      if (args.backgroundImage) {
+        v2Config.background = v2Config.background || {};
+        v2Config.background.mode = 'image';
+        v2Config.background.image = args.backgroundImage;
+        changes.push(`background.image: ${args.backgroundImage}`);
+      }
+
+      if (changes.length === 0) {
+        return {
+          content: [{
+            type: 'text' as const,
+            text: 'No v2 changes specified (use layout/captionFont/captionColor/backgroundGradient/backgroundDirection/backgroundImage).'
+          }]
+        };
+      }
+
+      try {
+        await fs.writeFile(configFile, JSON.stringify(config, null, 2) + '\n', 'utf8');
+      } catch (err) {
+        return {
+          content: [{
+            type: 'text' as const,
+            text: `Error writing config: ${err instanceof Error ? err.message : String(err)}`
+          }],
+          isError: true
+        };
+      }
+
+      return {
+        content: [{
+          type: 'text' as const,
+          text: `Updated v2 config:\n${changes.map(c => `  • ${c}`).join('\n')}`
+        }],
+        structuredContent: {
+          changes,
+          configFile
+        }
+      };
+    }
+
     const devices = config.devices as Record<string, Record<string, unknown>> | undefined;
     if (!devices || !devices[args.device]) {
       return {
@@ -633,32 +769,32 @@ function registerConfigTool(server: McpServer) {
     const deviceConfig = devices[args.device];
     const changes: string[] = [];
 
-    if (args.frameScale !== undefined) {
-      deviceConfig.frameScale = args.frameScale;
-      changes.push(`frameScale: ${args.frameScale}`);
+    if (v1Args.frameScale !== undefined) {
+      deviceConfig.frameScale = v1Args.frameScale;
+      changes.push(`frameScale: ${v1Args.frameScale}`);
     }
-    if (args.framePosition !== undefined) {
-      deviceConfig.framePosition = args.framePosition;
-      changes.push(`framePosition: ${args.framePosition}`);
+    if (v1Args.framePosition !== undefined) {
+      deviceConfig.framePosition = v1Args.framePosition;
+      changes.push(`framePosition: ${v1Args.framePosition}`);
     }
-    if (args.captionPosition !== undefined) {
-      deviceConfig.captionPosition = args.captionPosition;
-      changes.push(`captionPosition: ${args.captionPosition}`);
+    if (v1Args.captionPosition !== undefined) {
+      deviceConfig.captionPosition = v1Args.captionPosition;
+      changes.push(`captionPosition: ${v1Args.captionPosition}`);
     }
-    if (args.captionSize !== undefined) {
-      deviceConfig.captionSize = args.captionSize;
-      changes.push(`captionSize: ${args.captionSize}`);
+    if (v1Args.captionSize !== undefined) {
+      deviceConfig.captionSize = v1Args.captionSize;
+      changes.push(`captionSize: ${v1Args.captionSize}`);
     }
 
-    if (args.marginTop !== undefined || args.marginBottom !== undefined) {
+    if (v1Args.marginTop !== undefined || v1Args.marginBottom !== undefined) {
       const captionBox = (deviceConfig.captionBox as Record<string, unknown>) ?? {};
-      if (args.marginTop !== undefined) {
-        captionBox.marginTop = args.marginTop;
-        changes.push(`captionBox.marginTop: ${args.marginTop}`);
+      if (v1Args.marginTop !== undefined) {
+        captionBox.marginTop = v1Args.marginTop;
+        changes.push(`captionBox.marginTop: ${v1Args.marginTop}`);
       }
-      if (args.marginBottom !== undefined) {
-        captionBox.marginBottom = args.marginBottom;
-        changes.push(`captionBox.marginBottom: ${args.marginBottom}`);
+      if (v1Args.marginBottom !== undefined) {
+        captionBox.marginBottom = v1Args.marginBottom;
+        changes.push(`captionBox.marginBottom: ${v1Args.marginBottom}`);
       }
       deviceConfig.captionBox = captionBox;
     }
@@ -1299,7 +1435,7 @@ function registerFontsTool(server: McpServer) {
 
 function registerTemplateTool(server: McpServer) {
   const inputSchema = z.object({
-    template: z.string().optional().describe('Template ID to apply (modern, minimal, bold, elegant, showcase, playful, corporate)'),
+    template: z.string().optional().describe('Template ID to apply (ocean-header, sunset-footer, clean-screenshot, pastel-header, noir-footer, silver-header, tropical-header, slate-footer, midnight-header)'),
     list: z.boolean().optional().describe('List all available templates'),
     preview: z.string().optional().describe('Preview template configuration by ID'),
     caption: z.string().optional().describe('Add a single caption to all screenshots'),
@@ -1330,7 +1466,7 @@ function registerTemplateTool(server: McpServer) {
 
 function registerQuickstartTool(server: McpServer) {
   const inputSchema = z.object({
-    template: z.string().optional().describe('Template to use (default: modern)'),
+    template: z.string().optional().describe('Template to use (default: ocean-header)'),
     caption: z.string().optional().describe('Main caption for screenshots'),
     noInteractive: z.boolean().optional().describe('Skip interactive prompts'),
     force: z.boolean().optional().describe('Overwrite existing configuration'),
@@ -1352,5 +1488,35 @@ function registerQuickstartTool(server: McpServer) {
     const quickstartArgs = createQuickstartArgs(typedArgs);
     const result = await runAppshotCli(quickstartArgs, { cwd });
     return cliResultToToolResponse('Quickstart', result);
+  });
+}
+
+function registerWizardTool(server: McpServer) {
+  const inputSchema = z.object({
+    devices: z.array(z.string()).optional().describe('Device list (iphone, ipad, mac, watch)'),
+    layout: z.enum(['header', 'footer', 'screenshot-only']).optional().describe('Layout mode'),
+    template: z.string().optional().describe('Template preset id (ocean-header, sunset-footer, clean-screenshot, etc.)'),
+    captionSource: z.enum(['filenames', 'manual']).optional().describe('Caption source'),
+    languages: z.array(z.string()).optional().describe('Languages to build (e.g., en, es, fr)'),
+    model: z.string().optional().describe('OpenAI model (e.g., gpt-5-mini)'),
+    enhance: z.boolean().optional().describe('Enhance captions after translation'),
+    noEnhance: z.boolean().optional().describe('Disable caption enhancement'),
+    noInteractive: z.boolean().optional().describe('Skip prompts'),
+    dryRun: z.boolean().optional().describe('Print planned commands only'),
+    migrate: z.boolean().optional().describe('Auto-migrate v1 config to v2'),
+    requireAi: z.boolean().optional().describe('Fail if AI steps requested without API key')
+  });
+
+  server.registerTool('appshot_wizard', {
+    title: 'Wizard (v2)',
+    description: 'Runs the one-shot v2 wizard (layout/template → captions → translate/enhance → build).',
+    inputSchema,
+    annotations: {
+      readOnlyHint: false
+    }
+  }, async (args) => {
+    const wizardArgs = createWizardArgs(args as WizardToolArgs);
+    const run = await runAppshotCli(wizardArgs);
+    return cliResultToToolResponse('wizard', run);
   });
 }

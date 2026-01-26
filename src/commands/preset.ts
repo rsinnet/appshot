@@ -2,7 +2,7 @@ import { Command } from 'commander';
 import { existsSync, readFileSync, writeFileSync, readdirSync, mkdirSync } from 'fs';
 import * as path from 'path';
 import chalk from 'chalk';
-import { templates } from '../templates/registry.js';
+import { templates, applyTemplateToConfig, resolveTemplateId } from '../templates/registry.js';
 import { execFileSync } from 'child_process';
 import {
   sanitizeDevices,
@@ -11,6 +11,8 @@ import {
   validateTemplateId,
   sanitizeCaption
 } from '../utils/validation.js';
+import { detectConfigVersion } from '../utils/config-version.js';
+import { showV1DeprecationBanner } from '../utils/v2-banner.js';
 
 interface PresetOptions {
   caption?: string;
@@ -23,7 +25,7 @@ interface PresetOptions {
 
 export const presetCommand = new Command('preset')
   .description('Apply template preset and build in one command')
-  .argument('<preset>', 'Preset name (modern, bold, minimal, elegant, corporate, playful, showcase, nerdy)')
+  .argument('<preset>', 'Preset name (ocean-header, sunset-footer, clean-screenshot, pastel-header, noir-footer, silver-header, tropical-header, slate-footer, midnight-header)')
   .option('-c, --caption <text>', 'Add caption to all screenshots')
   .option('-d, --devices <list>', 'Comma-separated device list (iphone,ipad,watch,mac)')
   .option('-l, --langs <list>', 'Comma-separated language codes (en,es,fr,de,etc)')
@@ -42,8 +44,13 @@ export const presetCommand = new Command('preset')
         process.exit(1);
       }
 
+      const resolved = resolveTemplateId(presetName);
+      if (resolved.isAlias) {
+        console.log(chalk.yellow(`⚠ Legacy preset "${presetName}" mapped to "${resolved.id}"`));
+      }
+
       // Get template from registry (now guaranteed to exist)
-      const template = templates.find((t: any) => t.id === presetName)!;
+      const template = templates.find((t: any) => t.id === resolved.id)!;
 
       // Load current config
       const configPath = path.join(process.cwd(), '.appshot', 'config.json');
@@ -88,19 +95,15 @@ export const presetCommand = new Command('preset')
       // Backup current config
       const backupPath = path.join(process.cwd(), '.appshot', 'config.backup.json');
       const currentConfig = JSON.parse(readFileSync(configPath, 'utf-8'));
+      if (detectConfigVersion(currentConfig) === 1) {
+        showV1DeprecationBanner();
+        console.error(chalk.red('Preset templates are v2 only. Run "appshot migrate" first.'));
+        process.exit(1);
+      }
       writeFileSync(backupPath, JSON.stringify(currentConfig, null, 2));
 
-      // Apply template config
-      const templateConfig = (template as any);
-      const newConfig = {
-        ...currentConfig,
-        background: templateConfig.background,
-        caption: templateConfig.caption,
-        devices: {
-          ...currentConfig.devices,
-          ...templateConfig.devices
-        }
-      };
+      // Apply template config (v2)
+      const newConfig = applyTemplateToConfig(resolved.id, currentConfig);
 
       // Override output if specified (with sanitization)
       if (options.output) {

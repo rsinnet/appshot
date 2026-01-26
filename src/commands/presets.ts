@@ -2,6 +2,8 @@ import { Command } from 'commander';
 import { promises as fs } from 'fs';
 import pc from 'picocolors';
 import { ALL_PRESETS, getRequiredPresets, getPresetById } from '../core/app-store-specs.js';
+import { fileExists, loadConfig } from '../core/files.js';
+import { detectConfigVersion } from '../utils/config-version.js';
 import type { AppshotConfig } from '../types.js';
 
 export default function presetsCmd() {
@@ -102,6 +104,19 @@ async function generateConfig(presetIds: string, outputFile: string) {
 
   const foundPresets: string[] = [];
   const notFound: string[] = [];
+
+  try {
+    const configPath = '.appshot/config.json';
+    if (await fileExists(configPath)) {
+      const existing = await loadConfig();
+      if (detectConfigVersion(existing) === 2) {
+        console.log(pc.yellow('⚠'), 'Preset generation outputs a legacy v1 config.');
+        console.log(pc.dim('For v2 projects, use appshot init + appshot wizard, then migrate if needed.'));
+      }
+    }
+  } catch {
+    // Ignore config detection errors.
+  }
 
   for (const id of ids) {
     const preset = getPresetById(id);

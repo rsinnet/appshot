@@ -3,10 +3,11 @@ import path from 'path';
 import sharp from 'sharp';
 import pc from 'picocolors';
 import { UnifiedDevice } from '../types/device.js';
-import { composeAppStoreScreenshot, composeFrameOnly } from '../core/compose.js';
+import { composeAppStoreScreenshot, composeFrameOnly, composeV2 } from '../core/compose.js';
 import { frameRegistry, findBestFrame } from '../core/devices.js';
 import { loadCaptions } from '../core/files.js';
-import { AppshotConfig } from '../types.js';
+import { AppshotConfig, AppshotConfigV2 } from '../types.js';
+import { isV2Config } from '../utils/config-version.js';
 
 export interface ProcessOptions {
   frameOnly?: boolean;
@@ -29,7 +30,7 @@ export interface ProcessResult {
 }
 
 export class ComposeBridge {
-  constructor(private config: AppshotConfig) {}
+  constructor(private config: AppshotConfig | AppshotConfigV2) {}
 
   async processDeviceScreenshot(options: {
     screenshotPath: string;
@@ -62,8 +63,12 @@ export class ComposeBridge {
         console.warn(pc.yellow(`⚠️  No frame found for ${device.name} (${dimensions.width}x${dimensions.height})`));
       }
 
-      // 4. Get device-specific config
-      const deviceConfig = this.config.devices?.[device.category] || {};
+      const isV2 = isV2Config(this.config);
+      const deviceEntry = this.config.devices?.[device.category];
+      const deviceConfig = !isV2 ? (this.config as AppshotConfig).devices?.[device.category] || {} : undefined;
+      const deviceInputPath = isV2
+        ? (typeof deviceEntry === 'string' ? deviceEntry : deviceEntry?.input)
+        : (deviceConfig as any)?.input;
 
       // 5. Get captions if needed
       let caption = '';
@@ -91,25 +96,62 @@ export class ComposeBridge {
           processedBuffer = screenshotBuffer;
         }
       } else {
-        // Full processing with gradient and caption
-        // Determine output dimensions based on device or use defaults
-        const outputWidth = device.resolution ? parseInt(device.resolution.split('x')[0]) : 1290;
-        const outputHeight = device.resolution ? parseInt(device.resolution.split('x')[1]) : 2796;
+        // Full processing with background and caption
+        let outputWidth: number;
+        let outputHeight: number;
 
-        processedBuffer = await composeAppStoreScreenshot({
-          screenshot: screenshotBuffer,
-          frame: frameKey ? await this.loadFrame(frameKey) : null,
-          frameMetadata: frameKey ? this.getFrameMetadata(frameKey) : undefined,
-          caption,
-          captionConfig: this.config.caption || {},
-          gradientConfig: this.config.gradient || {
-            colors: ['#000000', '#333333'],
-            direction: 'top-bottom'
-          },
-          deviceConfig,
-          outputWidth,
-          outputHeight
-        });
+        if (isV2) {
+          const resolution = typeof deviceEntry === 'object' ? deviceEntry?.resolution : undefined;
+          if (resolution) {
+            const [configWidth, configHeight] = resolution.split('x').map(Number);
+            if (isPortrait) {
+              outputWidth = Math.min(configWidth, configHeight);
+              outputHeight = Math.max(configWidth, configHeight);
+            } else {
+              outputWidth = Math.max(configWidth, configHeight);
+              outputHeight = Math.min(configWidth, configHeight);
+            }
+          } else {
+            outputWidth = dimensions.width;
+            outputHeight = dimensions.height;
+          }
+
+          const v2Config = this.config as AppshotConfigV2;
+          processedBuffer = await composeV2({
+            screenshot: screenshotBuffer,
+            frame: frameKey ? await this.loadFrame(frameKey) : null,
+            frameMetadata: frameKey ? this.getFrameMetadata(frameKey) : undefined,
+            caption,
+            captionConfig: v2Config.caption,
+            backgroundConfig: v2Config.background,
+            outputWidth,
+            outputHeight,
+            layout: v2Config.layout,
+            deviceType: device.category as 'iphone' | 'ipad' | 'mac' | 'watch',
+            deviceInputPath
+          });
+        } else {
+          // Determine output dimensions based on device or use defaults
+          outputWidth = device.resolution ? parseInt(device.resolution.split('x')[0]) : 1290;
+          outputHeight = device.resolution ? parseInt(device.resolution.split('x')[1]) : 2796;
+
+          const v1Config = this.config as AppshotConfig;
+          const resolvedDeviceConfig = deviceConfig || ({} as AppshotConfig['devices'][string]);
+          processedBuffer = await composeAppStoreScreenshot({
+            screenshot: screenshotBuffer,
+            frame: frameKey ? await this.loadFrame(frameKey) : null,
+            frameMetadata: frameKey ? this.getFrameMetadata(frameKey) : undefined,
+            caption,
+            captionConfig: v1Config.caption || {},
+            gradientConfig: v1Config.gradient || {
+              colors: ['#000000', '#333333'],
+              direction: 'top-bottom'
+            },
+            deviceConfig: resolvedDeviceConfig,
+            outputWidth,
+            outputHeight
+          });
+        }
       }
 
       // 7. Determine output path
@@ -276,6 +318,6 @@ export class ComposeBridge {
   }
 }
 
-export function createComposeBridge(config: AppshotConfig): ComposeBridge {
+export function createComposeBridge(config: AppshotConfig | AppshotConfigV2): ComposeBridge {
   return new ComposeBridge(config);
 }

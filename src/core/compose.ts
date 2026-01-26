@@ -1,13 +1,17 @@
 import sharp from 'sharp';
 import { promises as fs } from 'fs';
 import pc from 'picocolors';
-import type { GradientConfig, CaptionConfig, DeviceConfig, BackgroundConfig } from '../types.js';
+import type { GradientConfig, CaptionConfig, DeviceConfig, BackgroundConfig, CaptionConfigV2, LayoutModeV2, DeviceStrategyV2 } from '../types.js';
 import { renderGradient } from './render.js';
 import { renderBackground, validateBackgroundDimensions } from './background.js';
 import { applyRoundedCorners } from './mask-generator.js';
 import { calculateAdaptiveCaptionHeight, wrapText } from './text-utils.js';
 import { FontService } from '../services/fonts.js';
 import { resolveLayoutSpacing } from './layout-utils.js';
+import { computeFontSize, computeRegions } from './layouts/math.js';
+import { fitBoxToRegion } from './layouts/device-fit.js';
+import { layoutCaptionText } from './layouts/text-layout.js';
+import { getDeviceStrategyV2 } from './device-strategies/index.js';
 
 /**
  * Parse font name to extract style and weight
@@ -146,6 +150,65 @@ function generateCaptionSVG(
            `font-weight="${fontWeight}" ` +
            `fill="${textColor}" ` +
            `text-anchor="${textAnchor}">${escapeXml(line)}</text>`;
+  });
+
+  svgElements.push(...textElements);
+
+  return `<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+    ${svgElements.join('\n    ')}
+  </svg>`;
+}
+
+function generateCaptionSvgV2(options: {
+  lines: string[];
+  width: number;
+  height: number;
+  fontSize: number;
+  fontFamily: string;
+  fontStyle: string;
+  fontWeight: string;
+  textColor: string;
+  lineHeight: number;
+  background?: { color?: string; opacity?: number };
+}): string {
+  const {
+    lines,
+    width,
+    height,
+    fontSize,
+    fontFamily,
+    fontStyle,
+    fontWeight,
+    textColor,
+    lineHeight,
+    background
+  } = options;
+
+  const svgElements: string[] = [];
+
+  if (background?.color) {
+    const opacity = background.opacity !== undefined ? background.opacity : 0.8;
+    svgElements.push(
+      `<rect x="0" y="0" width="${width}" height="${height}" ` +
+      `fill="${background.color}" opacity="${opacity}"/>`
+    );
+  }
+
+  const padding = Math.round(height * 0.1);
+  const innerHeight = Math.max(0, height - padding * 2);
+  const totalTextHeight = lines.length * fontSize * lineHeight;
+  const startY = padding + Math.max(fontSize, (innerHeight - totalTextHeight) / 2 + fontSize);
+  const centerX = Math.floor(width / 2);
+
+  const textElements = lines.map((line, index) => {
+    const y = startY + (index * fontSize * lineHeight);
+    return `<text x="${centerX}" y="${y}" ` +
+           `font-family="${fontFamily}" ` +
+           `font-size="${fontSize}" ` +
+           `font-style="${fontStyle}" ` +
+           `font-weight="${fontWeight}" ` +
+           `fill="${textColor}" ` +
+           `text-anchor="middle">${escapeXml(line)}</text>`;
   });
 
   svgElements.push(...textElements);
@@ -1226,6 +1289,186 @@ export async function composeAppStoreScreenshot(options: ComposeOptions): Promis
     .toBuffer();
 
   return result;
+}
+
+export interface LayoutV2DebugInfo {
+  layout: LayoutModeV2;
+  usable: { x: number; y: number; width: number; height: number };
+  caption?: { x: number; y: number; width: number; height: number };
+  device: { x: number; y: number; width: number; height: number };
+  deviceFit?: { x: number; y: number; width: number; height: number; scale: number };
+  fontSize?: number;
+  captionTruncated?: boolean;
+}
+
+export interface ComposeV2Options {
+  screenshot: Buffer;
+  frame?: Buffer | null;
+  frameMetadata?: {
+    frameWidth: number;
+    frameHeight: number;
+    screenRect: { x: number; y: number; width: number; height: number };
+    maskPath?: string;
+    deviceType?: 'iphone' | 'ipad' | 'mac' | 'watch';
+    displayName?: string;
+    name?: string;
+  };
+  caption?: string;
+  captionConfig: CaptionConfigV2;
+  backgroundConfig?: BackgroundConfig;
+  outputWidth: number;
+  outputHeight: number;
+  layout: LayoutModeV2;
+  deviceType: DeviceStrategyV2['deviceType'];
+  deviceInputPath?: string;
+  verbose?: boolean;
+  onDebug?: (info: LayoutV2DebugInfo) => void;
+}
+
+export async function composeV2(options: ComposeV2Options): Promise<Buffer> {
+  const {
+    screenshot,
+    frame,
+    frameMetadata,
+    caption,
+    captionConfig,
+    backgroundConfig,
+    outputWidth,
+    outputHeight,
+    layout,
+    deviceType,
+    deviceInputPath,
+    verbose = false,
+    onDebug
+  } = options;
+
+  const hasCaption = typeof caption === 'string' && caption.trim().length > 0;
+  const effectiveLayout = hasCaption ? layout : 'screenshot-only';
+
+  const strategy = getDeviceStrategyV2(deviceType);
+  const regions = computeRegions({ canvasWidth: outputWidth, canvasHeight: outputHeight, layout: effectiveLayout, strategy });
+
+  if (verbose) {
+    console.log(pc.dim('    v2 layout:'));
+    console.log(pc.dim(`      Layout: ${effectiveLayout}`));
+    if (!hasCaption && layout !== 'screenshot-only') {
+      console.log(pc.dim('      Layout override: no caption → screenshot-only'));
+    }
+    console.log(pc.dim(`      Usable: ${regions.usable.width}x${regions.usable.height} @ (${regions.usable.x}, ${regions.usable.y})`));
+    if (regions.caption) {
+      console.log(pc.dim(`      Caption: ${regions.caption.width}x${regions.caption.height} @ (${regions.caption.x}, ${regions.caption.y})`));
+    }
+    console.log(pc.dim(`      Device: ${regions.device.width}x${regions.device.height} @ (${regions.device.x}, ${regions.device.y})`));
+  }
+
+  let backgroundBuffer: Buffer;
+  if (backgroundConfig) {
+    backgroundBuffer = await renderBackground(outputWidth, outputHeight, backgroundConfig, deviceInputPath || '');
+    if (backgroundConfig.warnOnMismatch && backgroundConfig.image) {
+      const validation = await validateBackgroundDimensions(backgroundConfig.image, outputWidth, outputHeight);
+      if (validation.warnings.length > 0) {
+        console.warn(pc.yellow('⚠️  Background dimension warnings:'));
+        validation.warnings.forEach(warning => {
+          console.warn(pc.dim(`   ${warning}`));
+        });
+      }
+    }
+  } else {
+    const defaultGradient: GradientConfig = {
+      colors: ['#4A90E2', '#7B68EE'],
+      direction: 'top-bottom'
+    };
+    backgroundBuffer = await renderGradient(outputWidth, outputHeight, defaultGradient);
+  }
+
+  const composites: sharp.OverlayOptions[] = [];
+
+  let deviceFit: { x: number; y: number; width: number; height: number; scale: number } | undefined;
+
+  if (frame && frameMetadata) {
+    const framedBuffer = await composeFrameOnly({
+      screenshot,
+      frame,
+      frameMetadata,
+      outputFormat: 'png',
+      verbose
+    });
+    deviceFit = fitBoxToRegion(frameMetadata.frameWidth, frameMetadata.frameHeight, regions.device);
+    const resizedFrame = await sharp(framedBuffer)
+      .resize(deviceFit.width, deviceFit.height, { fit: 'fill' })
+      .toBuffer();
+    composites.push({
+      input: resizedFrame,
+      left: deviceFit.x,
+      top: deviceFit.y
+    });
+  } else {
+    const metadata = await sharp(screenshot).metadata();
+    const baseWidth = metadata.width || regions.device.width;
+    const baseHeight = metadata.height || regions.device.height;
+    deviceFit = fitBoxToRegion(baseWidth, baseHeight, regions.device);
+    const resizedScreenshot = await sharp(screenshot)
+      .resize(deviceFit.width, deviceFit.height, { fit: 'fill' })
+      .toBuffer();
+    composites.push({
+      input: resizedScreenshot,
+      left: deviceFit.x,
+      top: deviceFit.y
+    });
+  }
+
+  let captionTruncated = false;
+  let fontSize: number | undefined;
+
+  if (hasCaption && regions.caption && effectiveLayout !== 'screenshot-only') {
+    const screenHeight = frameMetadata?.screenRect.height || regions.device.height;
+    fontSize = computeFontSize(screenHeight, strategy);
+    const textLayout = layoutCaptionText(caption, regions.caption, fontSize, strategy);
+    captionTruncated = textLayout.truncated;
+
+    const parsedFont = parseFontName(captionConfig.font);
+    const fontFamily = getFontStack(parsedFont.family);
+    const fontStyle = parsedFont.style || 'normal';
+    const fontWeight = parsedFont.weight === 'bold' ? '700' : '400';
+
+    const svgText = generateCaptionSvgV2({
+      lines: textLayout.lines,
+      width: regions.caption.width,
+      height: regions.caption.height,
+      fontSize,
+      fontFamily,
+      fontStyle,
+      fontWeight,
+      textColor: captionConfig.color,
+      lineHeight: strategy.captionLineHeight,
+      background: captionConfig.background
+    });
+
+    const captionImage = await sharp(Buffer.from(svgText)).png().toBuffer();
+    composites.push({
+      input: captionImage,
+      left: regions.caption.x,
+      top: regions.caption.y
+    });
+
+    if (captionTruncated) {
+      console.warn(pc.yellow('⚠️  Caption truncated. Consider shortening the text.'));
+    }
+  }
+
+  if (onDebug) {
+    onDebug({
+      layout: effectiveLayout,
+      usable: regions.usable,
+      caption: regions.caption,
+      device: regions.device,
+      deviceFit,
+      fontSize,
+      captionTruncated
+    });
+  }
+
+  return sharp(backgroundBuffer).composite(composites).png().toBuffer();
 }
 
 /**

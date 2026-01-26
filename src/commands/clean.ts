@@ -11,6 +11,7 @@ export function createCleanCommand(): Command {
     .description('Clean generated screenshots and temporary files')
     .option('-o, --output <dir>', 'Output directory to clean', 'final')
     .option('-a, --all', 'Clean all generated files including .appshot config')
+    .option('--reset', 'Remove generated files but keep screenshots/')
     .option('--history', 'Clear caption autocomplete history')
     .option('--keep-history', 'Keep caption history when using --all')
     .option('-y, --yes', 'Skip confirmation prompt')
@@ -19,8 +20,22 @@ export function createCleanCommand(): Command {
       let shouldClearHistory = options.history;
       let historyFile: Buffer | null = null;
 
+      if (options.reset) {
+        dirs.push('.appshot', 'gradient-samples');
+        if (!options.keepHistory) {
+          shouldClearHistory = true;
+        } else {
+          try {
+            historyFile = await fs.readFile(path.join(process.cwd(), '.appshot', 'caption-history.json'));
+          } catch {
+            // History file doesn't exist yet
+          }
+        }
+      }
+
       if (options.all) {
         dirs.push('.appshot');
+        dirs.push('gradient-samples');
         // If --all is used without --keep-history, history will be cleared
         if (!options.keepHistory) {
           shouldClearHistory = true;

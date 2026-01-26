@@ -1,8 +1,8 @@
 import { promises as fs } from 'fs';
 import path from 'path';
-import type { AppshotConfig, CaptionsFile } from '../types.js';
+import type { AppshotConfig, AppshotConfigV2, CaptionsFile } from '../types.js';
 
-export async function loadConfig(configFile?: string): Promise<AppshotConfig> {
+export async function loadConfig(configFile?: string): Promise<AppshotConfig | AppshotConfigV2> {
   // If a custom config file is specified, use it directly
   // Otherwise, use the default .appshot/config.json
   let configPath: string;
@@ -47,11 +47,10 @@ export async function fileExists(filePath: string): Promise<boolean> {
   }
 }
 
-export async function saveConfig(config: AppshotConfig, configFile?: string): Promise<void> {
+export async function saveConfig(config: AppshotConfig | AppshotConfigV2, configFile?: string): Promise<void> {
   const configPath = configFile && configFile !== 'appshot.json'
     ? (path.isAbsolute(configFile) ? configFile : path.join(process.cwd(), configFile))
     : path.join(process.cwd(), '.appshot', 'config.json');
 
   await fs.writeFile(configPath, JSON.stringify(config, null, 2));
 }
-

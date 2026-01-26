@@ -9,14 +9,17 @@ import {
   getTemplate,
   applyTemplateToConfig,
   getTemplateCaptionSuggestions,
-  getTemplateCategories
+  getTemplateCategories,
+  resolveTemplateId
 } from '../templates/registry.js';
 import {
   validateTemplateId,
   sanitizeCaption,
   validateJson
 } from '../utils/validation.js';
-import type { AppshotConfig, CaptionsFile } from '../types.js';
+import type { AppshotConfigV2, CaptionsFile } from '../types.js';
+import { detectConfigVersion } from '../utils/config-version.js';
+import { showV1DeprecationBanner } from '../utils/v2-banner.js';
 
 export default function templateCmd() {
   const cmd = new Command('template')
@@ -30,33 +33,35 @@ export default function templateCmd() {
     .option('--no-backup', 'skip creating backup of current config')
     .option('--dry-run', 'preview changes without applying')
     .addHelpText('after', `
-${pc.bold('Available Templates:')}
-  ${pc.cyan('modern')}    - Eye-catching gradient with floating device
-  ${pc.cyan('minimal')}   - Soft pastel background with elegant typography
-  ${pc.cyan('bold')}      - Dark dramatic gradient with overlay captions
-  ${pc.cyan('elegant')}   - Sophisticated monochrome design
-  ${pc.cyan('showcase')}  - Custom backgrounds with partial frames
-  ${pc.cyan('playful')}   - Bright, fun gradients for games
-  ${pc.cyan('corporate')} - Clean, professional for business apps
+${pc.bold('Available Templates (v2):')}
+  ${pc.cyan('ocean-header')}     - Cool blue gradient, header layout
+  ${pc.cyan('sunset-footer')}    - Warm sunset gradient, footer layout
+  ${pc.cyan('clean-screenshot')} - Minimal, screenshot-only layout
+  ${pc.cyan('pastel-header')}    - Soft pastel gradient, header layout
+  ${pc.cyan('noir-footer')}      - Dark dramatic gradient, footer layout
+  ${pc.cyan('silver-header')}    - Elegant silver gradient, header layout
+  ${pc.cyan('tropical-header')}  - Bright tropical gradient, header layout
+  ${pc.cyan('slate-footer')}     - Professional slate gradient, footer layout
+  ${pc.cyan('midnight-header')}  - Deep blue gradient, header layout
 
 ${pc.bold('Examples:')}
   ${pc.dim('# Apply a template')}
-  $ appshot template modern
+  $ appshot template ocean-header
   
   ${pc.dim('# Apply with caption')}
-  $ appshot template minimal --caption "Beautiful & Simple"
+  $ appshot template pastel-header --caption "Beautiful & Simple"
   
   ${pc.dim('# List all templates')}
   $ appshot template --list
   
   ${pc.dim('# Preview template settings')}
-  $ appshot template --preview bold
+  $ appshot template --preview noir-footer
   
   ${pc.dim('# Apply to specific device')}
-  $ appshot template elegant --device iphone
+  $ appshot template silver-header --device iphone
 
 ${pc.bold('Quick Start:')}
-  $ appshot template modern --caption "Your App Name"
+  $ appshot template ocean-header --caption "Your App Name"
   $ appshot build
   
 ${pc.bold('Output:')}
@@ -71,12 +76,16 @@ ${pc.bold('Output:')}
 
         // Preview template
         if (opts.preview) {
-          if (!validateTemplateId(opts.preview)) {
+          const previewResolved = resolveTemplateId(opts.preview);
+          if (!validateTemplateId(previewResolved.id)) {
             console.error(pc.red(`Template "${opts.preview}" not found`));
             console.log(pc.dim('Run "appshot template --list" to see available templates'));
             process.exit(1);
           }
-          previewTemplate(opts.preview);
+          if (previewResolved.isAlias) {
+            console.log(pc.yellow(`⚠ Legacy template "${opts.preview}" mapped to "${previewResolved.id}"`));
+          }
+          previewTemplate(previewResolved.id);
           return;
         }
 
@@ -85,14 +94,16 @@ ${pc.bold('Output:')}
           templateId = await selectTemplate();
         }
 
+        const resolved = resolveTemplateId(templateId);
+
         // Validate template
-        if (!validateTemplateId(templateId)) {
+        if (!validateTemplateId(resolved.id)) {
           console.error(pc.red(`Template "${templateId}" not found`));
           console.log(pc.dim('Run "appshot template --list" to see available templates'));
           process.exit(1);
         }
 
-        const template = getTemplate(templateId);
+        const template = getTemplate(resolved.id);
         if (!template) {
           // This shouldn't happen after validation, but keep as safety
           console.error(pc.red(`Template "${templateId}" not found`));
@@ -101,10 +112,17 @@ ${pc.bold('Output:')}
 
         // Load current configuration
         const configPath = path.join(process.cwd(), '.appshot', 'config.json');
-        let config: Partial<AppshotConfig>;
+        let config: Partial<AppshotConfigV2>;
 
         try {
-          config = await loadConfig();
+          const loaded = await loadConfig();
+          const version = detectConfigVersion(loaded);
+          if (version === 1) {
+            showV1DeprecationBanner();
+            console.error(pc.red('Template presets are v2 only. Run "appshot migrate" first.'));
+            process.exit(1);
+          }
+          config = loaded as AppshotConfigV2;
         } catch {
           console.log(pc.yellow('No existing config found, creating new one'));
           config = createDefaultConfig();
@@ -118,7 +136,11 @@ ${pc.bold('Output:')}
         }
 
         // Apply template
-        const newConfig = applyTemplateToConfig(templateId, config);
+        if (resolved.isAlias) {
+          console.log(pc.yellow(`⚠ Legacy template "${templateId}" mapped to "${resolved.id}"`));
+        }
+
+        const newConfig = applyTemplateToConfig(resolved.id, config);
 
         // Apply to specific device only if requested
         if (opts.device && newConfig.devices) {
@@ -130,10 +152,7 @@ ${pc.bold('Output:')}
 
           // Keep original config but update only specified device
           config.devices = config.devices || {};
-          config.devices[opts.device] = {
-            ...config.devices[opts.device],
-            ...deviceConfig
-          };
+          config.devices[opts.device] = deviceConfig;
         } else {
           config = newConfig;
         }
@@ -162,13 +181,8 @@ ${pc.bold('Output:')}
         // Show what was configured
         console.log('\n' + pc.cyan('Template Configuration:'));
         console.log(`  Background: ${template.background.mode === 'gradient' ? 'Gradient' : 'Image/Auto'}`);
-        console.log(`  Device Scale: ${Math.round(template.deviceStyle.frameScale * 100)}%`);
-        console.log(`  Caption Position: ${template.captionStyle.position || 'above'}`);
-        console.log(`  Font: ${template.captionStyle.font}`);
-
-        if (template.deviceOverrides && Object.keys(template.deviceOverrides).length > 0) {
-          console.log(`  Device Optimizations: ${Object.keys(template.deviceOverrides).join(', ')}`);
-        }
+        console.log(`  Layout: ${template.layout}`);
+        console.log(`  Font: ${template.caption.font || 'SF Pro Display'}`);
 
         // Suggest next steps
         console.log('\n' + pc.bold('Next Steps:'));
@@ -183,7 +197,7 @@ ${pc.bold('Output:')}
 
         // Show caption suggestions
         if (!opts.caption && !opts.captions) {
-          const suggestions = getTemplateCaptionSuggestions(templateId);
+          const suggestions = getTemplateCaptionSuggestions(resolved.id);
           console.log('\n' + pc.dim('Caption suggestions for this template:'));
           console.log(pc.dim(`  Hero: "${suggestions.hero[0]}"`));
           console.log(pc.dim(`  Feature: "${suggestions.features[0]}"`));
@@ -225,15 +239,7 @@ function listTemplates() {
         features.push('Auto Background');
       }
 
-      if (template.deviceStyle.partialFrame) {
-        features.push('Partial Frame');
-      }
-
-      if (template.captionStyle.position === 'overlay') {
-        features.push('Overlay Caption');
-      } else if (template.captionStyle.position === 'below') {
-        features.push('Bottom Caption');
-      }
+      features.push(`Layout: ${template.layout}`);
 
       if (features.length > 0) {
         console.log(`  ${pc.green('Features:')} ${features.join(', ')}`);
@@ -274,41 +280,17 @@ function previewTemplate(templateId: string) {
     }
   }
 
-  // Device Style
-  console.log('\n' + pc.cyan('Device Style:'));
-  console.log(`  Scale: ${Math.round(template.deviceStyle.frameScale * 100)}%`);
-  console.log(`  Position: ${typeof template.deviceStyle.framePosition === 'number'
-    ? `${template.deviceStyle.framePosition}% from top`
-    : template.deviceStyle.framePosition}`);
-  if (template.deviceStyle.partialFrame) {
-    console.log(`  Partial Frame: Yes (${template.deviceStyle.frameOffset || 25}% cut)`);
-  }
+  // Layout
+  console.log('\n' + pc.cyan('Layout:'));
+  console.log(`  Mode: ${template.layout}`);
 
   // Caption Style
   console.log('\n' + pc.cyan('Caption Style:'));
-  console.log(`  Font: ${template.captionStyle.font}`);
-  console.log(`  Size: ${template.captionStyle.fontsize}px`);
-  console.log(`  Color: ${template.captionStyle.color}`);
-  console.log(`  Position: ${template.captionStyle.position || 'above'}`);
+  console.log(`  Font: ${template.caption.font || 'SF Pro Display'}`);
+  console.log(`  Color: ${template.caption.color || '#FFFFFF'}`);
 
-  if (template.captionStyle.background) {
-    console.log(`  Background: ${template.captionStyle.background.color} (${Math.round((template.captionStyle.background.opacity || 1) * 100)}% opacity)`);
-  }
-
-  if (template.captionStyle.border) {
-    console.log(`  Border: ${template.captionStyle.border.width || 1}px ${template.captionStyle.border.color || 'default'}`);
-  }
-
-  // Device Overrides
-  if (template.deviceOverrides && Object.keys(template.deviceOverrides).length > 0) {
-    console.log('\n' + pc.cyan('Device-Specific Settings:'));
-    for (const [device, override] of Object.entries(template.deviceOverrides)) {
-      const settings = [];
-      if (override.frameScale) settings.push(`scale: ${Math.round(override.frameScale * 100)}%`);
-      if (override.captionSize) settings.push(`font: ${override.captionSize}px`);
-      if (override.framePosition !== undefined) settings.push(`position: ${override.framePosition}`);
-      console.log(`  ${device}: ${settings.join(', ')}`);
-    }
+  if (template.caption.background) {
+    console.log(`  Background: ${template.caption.background.color} (${Math.round((template.caption.background.opacity || 1) * 100)}% opacity)`);
   }
 
   // Caption Suggestions
@@ -360,30 +342,39 @@ async function selectTemplate(): Promise<string> {
 /**
  * Create default configuration
  */
-function createDefaultConfig(): Partial<AppshotConfig> {
+function createDefaultConfig(): Partial<AppshotConfigV2> {
   return {
+    version: 2,
     output: './final',
     frames: './frames',
+    layout: 'header',
+    caption: {
+      font: 'SF Pro Display',
+      color: '#FFFFFF'
+    },
+    background: {
+      mode: 'gradient',
+      gradient: {
+        colors: ['#667eea', '#764ba2'],
+        direction: 'top-bottom'
+      }
+    },
     devices: {
       iphone: {
         input: './screenshots/iphone',
-        resolution: '1290x2796',
-        autoFrame: true
+        resolution: '1290x2796'
       },
       ipad: {
         input: './screenshots/ipad',
-        resolution: '2048x2732',
-        autoFrame: true
+        resolution: '2048x2732'
       },
       mac: {
         input: './screenshots/mac',
-        resolution: '2880x1800',
-        autoFrame: true
+        resolution: '2880x1800'
       },
       watch: {
         input: './screenshots/watch',
-        resolution: '410x502',
-        autoFrame: true
+        resolution: '410x502'
       }
     }
   };
@@ -393,7 +384,7 @@ function createDefaultConfig(): Partial<AppshotConfig> {
  * Add captions to configuration
  */
 async function addCaptions(
-  config: Partial<AppshotConfig>,
+  config: Partial<AppshotConfigV2>,
   singleCaption?: string,
   captionsJson?: string
 ) {

@@ -1,5 +1,31 @@
 # Template Reference
 
+## v2 Templates (Current)
+
+Fixed layout modes with curated gradients:
+
+| Use Case | Recommended Template |
+|----------|----------------------|
+| General purpose | `ocean-header` |
+| Bold marketing | `sunset-footer` |
+| Product-only | `clean-screenshot` |
+| Clean + friendly | `pastel-header` |
+| Dark + dramatic | `noir-footer` |
+| Professional | `silver-header` |
+| Playful brand | `tropical-header` |
+| Business | `slate-footer` |
+| Developer tools | `midnight-header` |
+
+```
+appshot_template with template: "ocean-header"
+```
+
+---
+
+## v1 Templates (Legacy)
+
+> v1 legacy templates remain as deprecated aliases. See `docs/layout-v2.md` for v2 rules and `docs/migration-v2.md` to upgrade.
+
 8 professional templates for App Store screenshots.
 
 ## Template Selection Guide

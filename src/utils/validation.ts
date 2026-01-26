@@ -2,7 +2,7 @@
  * Shared validation utilities for command security
  */
 
-import { templates } from '../templates/registry.js';
+import { templates, resolveTemplateId } from '../templates/registry.js';
 
 // Maximum lengths to prevent DoS
 const MAX_DEVICE_LIST_LENGTH = 100;
@@ -99,8 +99,9 @@ export function validateTemplateId(templateId: string): boolean {
     return false;
   }
 
-  // Only accept known template IDs
-  return templates.some((t: any) => t.id === templateId);
+  // Only accept known template IDs (including legacy aliases)
+  const resolved = resolveTemplateId(templateId);
+  return templates.some((t: any) => t.id === resolved.id);
 }
 
 /**

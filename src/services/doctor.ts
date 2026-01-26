@@ -6,6 +6,7 @@ import { platform } from 'os';
 import sharp from 'sharp';
 import { FontService } from './fonts.js';
 import { loadConfig } from '../core/files.js';
+import { detectConfigVersion } from '../utils/config-version.js';
 import { frameRegistry } from '../core/devices.js';
 import { systemRequirements } from './system-requirements.js';
 import { APP_VERSION } from '../version.js';
@@ -428,13 +429,24 @@ export class DoctorService {
 
       // Check configuration file
       try {
-        await loadConfig();
+        const config = await loadConfig();
+        const version = detectConfigVersion(config);
         this.addResult({
           name: 'Configuration File',
           category: 'filesystem',
           status: 'pass',
-          message: 'Configuration file valid'
+          message: `Configuration file valid (v${version})`
         });
+
+        if (version === 1) {
+          this.addResult({
+            name: 'Config Version',
+            category: 'filesystem',
+            status: 'warning',
+            message: 'v1 config detected (deprecated)',
+            suggestion: 'Run "appshot migrate" to upgrade to v2'
+          });
+        }
       } catch {
         this.addResult({
           name: 'Configuration File',

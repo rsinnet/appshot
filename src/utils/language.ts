@@ -1,4 +1,4 @@
-import type { CaptionsFile, AppshotConfig } from '../types.js';
+import type { CaptionsFile, AppshotConfig, AppshotConfigV2 } from '../types.js';
 
 /**
  * Get the system's default language code
@@ -54,7 +54,7 @@ export function detectLanguagesFromCaptions(captions: CaptionsFile): string[] {
 export function resolveLanguages(
   cliLangs: string[] | undefined,
   captions: CaptionsFile,
-  config: AppshotConfig
+  config: AppshotConfig | AppshotConfigV2
 ): { languages: string[]; source: string } {
   // Priority 1: CLI languages
   if (cliLangs && cliLangs.length > 0) {
@@ -74,7 +74,7 @@ export function resolveLanguages(
   }
 
   // Priority 3: Config default language
-  if (config.defaultLanguage) {
+  if ('defaultLanguage' in config && config.defaultLanguage) {
     return {
       languages: [config.defaultLanguage],
       source: 'config setting'

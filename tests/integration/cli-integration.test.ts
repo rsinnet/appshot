@@ -239,8 +239,9 @@ describe('CLI Integration Tests', { timeout: 60000 }, () => {
       
       const config = JSON.parse(await fs.readFile('.appshot/config.json', 'utf-8'));
       // Check that gradient was modified
-      expect(config.gradient).toBeDefined();
-      expect(config.gradient.preset || config.gradient.colors).toBeDefined();
+      expect(config.background?.gradient || config.gradient).toBeDefined();
+      const gradient = config.background?.gradient ?? config.gradient;
+      expect(gradient.preset || gradient.colors).toBeDefined();
     });
   });
 
@@ -256,7 +257,7 @@ describe('CLI Integration Tests', { timeout: 60000 }, () => {
       await runAppshot('fonts --set "Arial" --device iphone');
       
       const config = JSON.parse(await fs.readFile('.appshot/config.json', 'utf-8'));
-      expect(config.devices.iphone.captionFont).toBe('Arial');
+      expect(config.caption.font).toBe('Arial');
     }, 120000); // 2 minute timeout for CI
   });
 
@@ -328,20 +329,30 @@ describe('CLI Integration Tests', { timeout: 60000 }, () => {
 
   describe('Migration Command', () => {
     it('should migrate project structure', async () => {
-      // Initialize project first
+      // Initialize project and create a v1 config
       await runAppshot('init --force');
-      
-      // Create old structure
-      await fs.mkdir('final/iphone', { recursive: true });
-      await fs.writeFile('final/iphone/test.png', Buffer.from('fake-image'));
-      
-      const { stdout } = await runAppshot('migrate --output-structure --lang en');
-      
-      // Check for language subdirectory
-      const files = await fs.readdir('final/iphone');
-      const hasLanguageDir = files.some(f => ['en', 'es', 'fr', 'de', 'ja', 'zh'].includes(f));
-      
-      expect(hasLanguageDir || files.length === 0).toBe(true);
+
+      const v1Config = {
+        output: './final',
+        caption: {
+          position: 'above',
+          font: 'SF Pro Display',
+          fontsize: 64,
+          color: '#FFFFFF'
+        },
+        devices: {
+          iphone: { input: './screenshots/iphone' }
+        }
+      };
+
+      await fs.writeFile('.appshot/config.json', JSON.stringify(v1Config, null, 2));
+
+      await runAppshot('migrate --yes');
+
+      const migrated = JSON.parse(await fs.readFile('.appshot/config.json', 'utf-8'));
+      expect(migrated.version).toBe(2);
+      expect(migrated.layout).toBe('header');
+      expect(migrated.caption.font).toBe('SF Pro Display');
     }, 10000); // 10 second timeout
   });
 
@@ -410,8 +421,8 @@ describe('CLI Integration Tests', { timeout: 60000 }, () => {
   describe.skip('End-to-End Template Workflows', () => {
     it('should complete full workflow: quickstart → template → build → validate', async () => {
       // Step 1: Quickstart with template
-      const { stdout: quickstartOut } = await runAppshot('quickstart --force --template modern --no-interactive');
-      expect(quickstartOut).toContain('modern');
+      const { stdout: quickstartOut } = await runAppshot('quickstart --force --template ocean-header --no-interactive');
+      expect(quickstartOut).toContain('ocean-header');
 
       // Step 2: Create test screenshots
       await sharp({
@@ -491,7 +502,7 @@ describe('CLI Integration Tests', { timeout: 60000 }, () => {
         JSON.stringify({ 'test.png': 'iPad Screenshot' }, null, 2));
 
       // Apply preset and build
-      const { stdout, stderr } = await runAppshot('preset elegant --devices iphone,ipad');
+      const { stdout, stderr } = await runAppshot('preset silver-header --devices iphone,ipad');
 
       if (stderr) {
         console.error('Preset error:', stderr);
@@ -508,7 +519,7 @@ describe('CLI Integration Tests', { timeout: 60000 }, () => {
 
       // Verify template was applied
       const config = JSON.parse(await fs.readFile('.appshot/config.json', 'utf-8'));
-      expect(config.caption.font).toBe('Playfair Display'); // Elegant template font
+      expect(config.caption.font).toBe('New York');
     });
 
     it('should handle security: malicious inputs are sanitized', async () => {
@@ -516,7 +527,7 @@ describe('CLI Integration Tests', { timeout: 60000 }, () => {
       await runAppshot('init --force');
 
       // Test command injection prevention
-      const { stdout, stderr } = await runAppshot('preset modern --devices "iphone; echo HACKED > /tmp/hacked.txt" --dry-run');
+      const { stdout, stderr } = await runAppshot('preset ocean-header --devices "iphone; echo HACKED > /tmp/hacked.txt" --dry-run');
 
       // Should sanitize the input
       expect(stdout).toContain('No valid devices');
@@ -536,7 +547,7 @@ describe('CLI Integration Tests', { timeout: 60000 }, () => {
     });
 
     it('should apply all templates successfully in sequence', async () => {
-      const templates = ['modern', 'minimal', 'bold', 'elegant'];
+      const templates = ['ocean-header', 'pastel-header', 'noir-footer', 'silver-header'];
 
       // Create a test screenshot
       await sharp({
@@ -576,7 +587,7 @@ describe('CLI Integration Tests', { timeout: 60000 }, () => {
 
     it('should handle multi-language workflow', async () => {
       // Apply template
-      await runAppshot('template modern');
+      await runAppshot('template ocean-header');
 
       // Create screenshot
       await sharp({

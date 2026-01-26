@@ -81,12 +81,11 @@ describe.skip('Font Fallback Integration', { timeout: 60000 }, () => {
     });
 
     it('should validate font during template application', async () => {
-      const { stdout } = await runAppshot('template modern --verbose');
+      const { stdout } = await runAppshot('template ocean-header --verbose');
 
-      // Modern template uses Poppins font
-      // If it's not available, should still apply template
+      // Ocean header uses SF Pro Display Bold
       const config = JSON.parse(await fs.readFile(path.join(testDir, '.appshot/config.json'), 'utf-8'));
-      expect(config.caption.font).toBe('Poppins');
+      expect(config.caption.font).toBe('SF Pro Display Bold');
     });
 
     it('should show warning for unavailable fonts', async () => {
@@ -171,15 +170,15 @@ describe.skip('Font Fallback Integration', { timeout: 60000 }, () => {
   describe('Template Font Fallback', () => {
     it('should handle templates with unavailable fonts', async () => {
       // Apply template that might have a font not installed
-      await runAppshot('template elegant');
+      await runAppshot('template silver-header');
 
-      // Elegant uses "Playfair Display" which might not be installed
+      // Silver header uses "New York" which might not be installed
       const config = JSON.parse(await fs.readFile(path.join(testDir, '.appshot/config.json'), 'utf-8'));
-      expect(config.caption.font).toBe('Playfair Display');
+      expect(config.caption.font).toBe('New York');
 
       // Add caption and build
       await fs.writeFile(path.join(testDir, '.appshot/captions/iphone.json'),
-        JSON.stringify({ 'test.png': 'Elegant Test' }, null, 2));
+        JSON.stringify({ 'test.png': 'Silver Test' }, null, 2));
 
       const { stderr } = await runAppshot('build --devices iphone');
 
@@ -190,7 +189,7 @@ describe.skip('Font Fallback Integration', { timeout: 60000 }, () => {
     });
 
     it.skip('should apply all templates successfully regardless of font availability', async () => {
-      const templates = ['modern', 'minimal', 'bold', 'elegant', 'nerdy', 'showcase', 'playful', 'corporate'];
+      const templates = ['ocean-header', 'pastel-header', 'noir-footer', 'silver-header', 'midnight-header', 'clean-screenshot', 'tropical-header', 'slate-footer'];
 
       for (const template of templates) {
         // Fresh init

@@ -134,15 +134,6 @@ build_device_sample() {
 
   echo -e "${BLUE}→${NC} ${template} on ${device}"
 
-  local bg_src="screenshots/backgrounds/${device}.png"
-  local bg_dest="screenshots/${device}/background.png"
-  if [[ "$template" == "nerdy" && -f "$bg_src" ]]; then
-    cp "$bg_src" "$bg_dest"
-    echo -e "   ${GREEN}✓${NC} Applied nerdy background"
-  else
-    rm -f "$bg_dest"
-  fi
-
   node "$CLI_JS" template "$template" --no-backup >/dev/null 2>&1
 
   # Write captions file
@@ -188,17 +179,18 @@ if $GENERATE_GALLERY; then
 fi
 
 # Templates and captions
-TEMPLATES=(modern minimal bold elegant showcase playful corporate nerdy)
+TEMPLATES=(ocean-header sunset-footer clean-screenshot pastel-header noir-footer silver-header tropical-header slate-footer midnight-header)
 caption_for_template() {
   case "$1" in
-    modern) echo "Vibrant Gradient • Clean Focus" ;;
-    minimal) echo "Simple, Elegant, Focused" ;;
-    bold) echo "Make a Powerful Statement" ;;
-    elegant) echo "Sophisticated and Professional" ;;
-    showcase) echo "Showcase Your Best Features" ;;
-    playful) echo "Bright Colors, Fun Vibes" ;;
-    corporate) echo "Clean, Professional, Trusted" ;;
-    nerdy) echo "Hack the Planet" ;;
+    ocean-header) echo "Fresh clarity for your best ideas" ;;
+    sunset-footer) echo "Bold highlights with warm energy" ;;
+    clean-screenshot) echo "Let the product do the talking" ;;
+    pastel-header) echo "Soft focus for modern teams" ;;
+    noir-footer) echo "High-contrast, premium feel" ;;
+    silver-header) echo "Elegant polish for professionals" ;;
+    tropical-header) echo "Bright, playful momentum" ;;
+    slate-footer) echo "Confident, corporate clarity" ;;
+    midnight-header) echo "Deep focus, crisp contrast" ;;
     *) echo "Beautiful App Screenshots" ;;
   esac
 }
@@ -228,15 +220,15 @@ if $GENERATE_GALLERY; then
   if command -v magick >/dev/null 2>&1; then
     echo -e "${BLUE}🖼  Creating combined gallery (ImageMagick)...${NC}"
     magick montage \
-      -label "Modern" gallery/modern-sample.png \
-      -label "Minimal" gallery/minimal-sample.png \
-      -label "Bold" gallery/bold-sample.png \
-      -label "Elegant" gallery/elegant-sample.png \
-      -label "Showcase" gallery/showcase-sample.png \
-      -label "Playful" gallery/playful-sample.png \
-      -label "Corporate" gallery/corporate-sample.png \
-      -label "Nerdy OSS" gallery/nerdy-sample.png \
-      -label "" xc:transparent \
+      -label "Ocean" gallery/ocean-header-sample.png \
+      -label "Sunset" gallery/sunset-footer-sample.png \
+      -label "Clean" gallery/clean-screenshot-sample.png \
+      -label "Pastel" gallery/pastel-header-sample.png \
+      -label "Noir" gallery/noir-footer-sample.png \
+      -label "Silver" gallery/silver-header-sample.png \
+      -label "Tropical" gallery/tropical-header-sample.png \
+      -label "Slate" gallery/slate-footer-sample.png \
+      -label "Midnight" gallery/midnight-header-sample.png \
       -geometry 400x866+10+10 \
       -tile 3x3 \
       -background white \
@@ -248,15 +240,15 @@ if $GENERATE_GALLERY; then
   elif command -v montage >/dev/null 2>&1; then
     echo -e "${BLUE}🖼  Creating combined gallery (montage)...${NC}"
     montage \
-      -label "Modern" gallery/modern-sample.png \
-      -label "Minimal" gallery/minimal-sample.png \
-      -label "Bold" gallery/bold-sample.png \
-      -label "Elegant" gallery/elegant-sample.png \
-      -label "Showcase" gallery/showcase-sample.png \
-      -label "Playful" gallery/playful-sample.png \
-      -label "Corporate" gallery/corporate-sample.png \
-      -label "Nerdy OSS" gallery/nerdy-sample.png \
-      -label "" xc:transparent \
+      -label "Ocean" gallery/ocean-header-sample.png \
+      -label "Sunset" gallery/sunset-footer-sample.png \
+      -label "Clean" gallery/clean-screenshot-sample.png \
+      -label "Pastel" gallery/pastel-header-sample.png \
+      -label "Noir" gallery/noir-footer-sample.png \
+      -label "Silver" gallery/silver-header-sample.png \
+      -label "Tropical" gallery/tropical-header-sample.png \
+      -label "Slate" gallery/slate-footer-sample.png \
+      -label "Midnight" gallery/midnight-header-sample.png \
       -geometry 400x866+10+10 \
       -tile 3x3 \
       -background white \

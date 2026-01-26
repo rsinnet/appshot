@@ -3,8 +3,11 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import pc from 'picocolors';
 import { select, input } from '@inquirer/prompts';
+import sharp from 'sharp';
 import { validateBackgroundDimensions, detectBestFit } from '../core/background.js';
 import { loadConfig, saveConfig } from '../core/files.js';
+import { isV2Config } from '../utils/config-version.js';
+import type { AppshotConfig } from '../types.js';
 
 export default function backgroundsCommand(): Command {
   const cmd = new Command('backgrounds')
@@ -27,6 +30,10 @@ ${pc.bold('Fit Modes:')}
   contain    Scale to fit within area (may add bars)
   fill       Stretch to exact dimensions (may distort)
   scale-down Only scale down if larger, never scale up
+
+${pc.bold('v2 vs v1:')}
+  v2 configs only support a global background.
+  Per-device backgrounds are legacy and only apply to v1 configs.
 `);
 
   // Set background for a device
@@ -82,6 +89,20 @@ ${pc.bold('Fit Modes:')}
 
         // Load config
         const config = await loadConfig();
+        if (isV2Config(config)) {
+          if (!options.global && device) {
+            console.log(pc.yellow('Per-device backgrounds are not supported in v2. Use --global or omit the device.'));
+            return;
+          }
+
+          config.background = config.background ?? { mode: 'image', warnOnMismatch: true };
+          config.background.mode = 'image';
+          config.background.image = image;
+          config.background.fit = options.fit;
+          await saveConfig(config);
+          console.log(pc.green(`✅ Set global background: ${image}`));
+          return;
+        }
 
         // Initialize background config if not exists
         if (!config.background) {
@@ -132,17 +153,141 @@ ${pc.bold('Fit Modes:')}
     .action(async (options) => {
       try {
         const config = await loadConfig();
+        if (isV2Config(config)) {
+          const devices = options.device
+            ? [options.device]
+            : Object.keys(config.devices);
+
+          console.log(pc.bold('\n📐 Validating background dimensions (v2)...\n'));
+
+          let hasWarnings = false;
+
+          for (const device of devices) {
+            const deviceEntry = config.devices[device];
+            if (!deviceEntry) continue;
+
+            const inputDir = typeof deviceEntry === 'string' ? deviceEntry : deviceEntry.input;
+            const resolution = typeof deviceEntry === 'object' ? deviceEntry.resolution : undefined;
+
+            let backgroundPath: string | null = null;
+            if (config.background?.image) {
+              backgroundPath = config.background.image;
+            } else {
+              const candidates = [
+                path.join(inputDir, 'background.png'),
+                path.join(inputDir, 'background.jpg'),
+                path.join(inputDir, 'background.jpeg'),
+                path.join('screenshots', 'background.png'),
+                path.join('screenshots', 'background.jpg'),
+                path.join('screenshots', 'background.jpeg')
+              ];
+
+              for (const candidate of candidates) {
+                try {
+                  await fs.access(candidate);
+                  backgroundPath = candidate;
+                  break;
+                } catch {
+                  // Continue checking
+                }
+              }
+            }
+
+            if (!backgroundPath) {
+              console.log(pc.dim(`${device}: No background image found`));
+              continue;
+            }
+
+            const inputPath = path.resolve(inputDir);
+            let files: string[] = [];
+            try {
+              files = await fs.readdir(inputPath);
+            } catch {
+              console.log(pc.yellow(`${device}: Input directory not found: ${inputDir}`));
+              continue;
+            }
+
+            const screenshots = files.filter(f => f.match(/\.(png|jpg|jpeg)$/i));
+            if (screenshots.length === 0) {
+              console.log(pc.dim(`${device}: No screenshots found`));
+              continue;
+            }
+
+            for (const screenshot of screenshots) {
+              const screenshotPath = path.join(inputPath, screenshot);
+              const metadata = await sharp(screenshotPath).metadata();
+              if (!metadata.width || !metadata.height) {
+                console.log(pc.yellow(`${device}: Unable to read ${screenshot}`));
+                continue;
+              }
+
+              const orientation = metadata.width > metadata.height ? 'landscape' : 'portrait';
+              let targetWidth = metadata.width;
+              let targetHeight = metadata.height;
+
+              if (resolution) {
+                const [configWidth, configHeight] = resolution.split('x').map(Number);
+                if (orientation === 'portrait') {
+                  targetWidth = Math.min(configWidth, configHeight);
+                  targetHeight = Math.max(configWidth, configHeight);
+                } else {
+                  targetWidth = Math.max(configWidth, configHeight);
+                  targetHeight = Math.min(configWidth, configHeight);
+                }
+              }
+
+              const validation = await validateBackgroundDimensions(
+                backgroundPath,
+                targetWidth,
+                targetHeight
+              );
+
+              console.log(pc.cyan(`${device}: ${screenshot}`));
+              console.log(pc.dim(`  Background: ${backgroundPath}`));
+              console.log(pc.dim(`  Source: ${validation.dimensions.source.width}x${validation.dimensions.source.height}`));
+              console.log(pc.dim(`  Target: ${validation.dimensions.target.width}x${validation.dimensions.target.height}`));
+
+              if (validation.warnings.length > 0) {
+                hasWarnings = true;
+                validation.warnings.forEach(warning => {
+                  console.log(pc.yellow(`  ⚠️  ${warning}`));
+                });
+
+                const bestFit = detectBestFit(
+                  validation.dimensions.source.width,
+                  validation.dimensions.source.height,
+                  validation.dimensions.target.width,
+                  validation.dimensions.target.height
+                );
+                console.log(pc.cyan(`  💡 Suggested fit mode: ${bestFit}`));
+              } else {
+                console.log(pc.green('  ✅ Dimensions OK'));
+              }
+
+              console.log();
+            }
+          }
+
+          if (hasWarnings) {
+            console.log(pc.yellow('⚠️  Some backgrounds have dimension warnings'));
+            console.log(pc.dim('Run "appshot backgrounds set" to adjust fit modes'));
+          } else {
+            console.log(pc.green('✅ All backgrounds validated successfully'));
+          }
+          return;
+        }
+        const v1Config = config as AppshotConfig;
         let hasWarnings = false;
 
         // Get devices to validate
         const devices = options.device
           ? [options.device]
-          : Object.keys(config.devices);
+          : Object.keys(v1Config.devices);
 
         console.log(pc.bold('\n📐 Validating background dimensions...\n'));
 
         for (const device of devices) {
-          const deviceConfig = config.devices[device];
+          const deviceConfig = v1Config.devices[device];
           if (!deviceConfig) continue;
 
           // Find background image
@@ -150,8 +295,8 @@ ${pc.bold('Fit Modes:')}
 
           if (deviceConfig.background?.image) {
             backgroundPath = deviceConfig.background.image;
-          } else if (config.background?.image) {
-            backgroundPath = config.background.image;
+          } else if (v1Config.background?.image) {
+            backgroundPath = v1Config.background.image;
           } else {
             // Check for auto-detected background
             const candidates = [
@@ -251,6 +396,11 @@ ${pc.bold('Fit Modes:')}
 
         for (const device of devices) {
           console.log(pc.cyan(`${device}:`));
+          if (isV2Config(config)) {
+            const deviceEntry = config.devices[device];
+            const inputDir = typeof deviceEntry === 'string' ? deviceEntry : deviceEntry?.input;
+            console.log(pc.dim(`  Input: ${inputDir || 'unknown'}`));
+          }
           console.log(pc.dim(`  Would generate preview in ${outputDir}/${device}/`));
         }
 
@@ -283,6 +433,21 @@ ${pc.bold('Fit Modes:')}
         }
 
         const config = await loadConfig();
+        if (isV2Config(config)) {
+          if (device !== 'all') {
+            console.log(pc.yellow('Per-device backgrounds are not supported in v2. Use "all" to clear global background.'));
+            return;
+          }
+
+          if (config.background) {
+            delete config.background.image;
+            console.log(pc.green('✅ Cleared global background'));
+          }
+
+          await saveConfig(config);
+          console.log(pc.dim('Configuration saved'));
+          return;
+        }
 
         if (device === 'all') {
           // Clear global background
@@ -314,19 +479,33 @@ ${pc.bold('Fit Modes:')}
     .action(async () => {
       try {
         const config = await loadConfig();
+        if (isV2Config(config)) {
+          console.log(pc.bold('\n📋 Configured Backgrounds (v2):\n'));
+          if (config.background?.image) {
+            console.log(pc.cyan('Global:'));
+            console.log(pc.dim(`  Image: ${config.background.image}`));
+            console.log(pc.dim(`  Fit: ${config.background.fit || 'cover'}`));
+          } else {
+            console.log(pc.dim('  No global background configured.'));
+          }
+          console.log(pc.dim('\nPer-device backgrounds are not supported in v2.'));
+          return;
+        }
+
+        const v1Config = config as AppshotConfig;
 
         console.log(pc.bold('\n📋 Configured Backgrounds:\n'));
 
         // Global background
-        if (config.background?.image) {
+        if (v1Config.background?.image) {
           console.log(pc.cyan('Global:'));
-          console.log(pc.dim(`  Image: ${config.background.image}`));
-          console.log(pc.dim(`  Fit: ${config.background.fit || 'cover'}`));
+          console.log(pc.dim(`  Image: ${v1Config.background.image}`));
+          console.log(pc.dim(`  Fit: ${v1Config.background.fit || 'cover'}`));
           console.log();
         }
 
         // Device-specific backgrounds
-        for (const [device, deviceConfig] of Object.entries(config.devices)) {
+        for (const [device, deviceConfig] of Object.entries(v1Config.devices)) {
           if (deviceConfig.background?.image) {
             console.log(pc.cyan(`${device}:`));
             console.log(pc.dim(`  Image: ${deviceConfig.background.image}`));
@@ -337,7 +516,7 @@ ${pc.bold('Fit Modes:')}
 
         // Auto-detected backgrounds
         console.log(pc.bold('Auto-detected backgrounds:'));
-        for (const [device, deviceConfig] of Object.entries(config.devices)) {
+        for (const [device, deviceConfig] of Object.entries(v1Config.devices)) {
           const candidates = [
             path.join(deviceConfig.input, 'background.png'),
             path.join(deviceConfig.input, 'background.jpg')

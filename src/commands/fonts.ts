@@ -1,19 +1,10 @@
 import { Command } from 'commander';
 import pc from 'picocolors';
 import inquirer from 'inquirer';
-import { promises as fs } from 'fs';
-import path from 'path';
 import { FontService } from '../services/fonts.js';
-import { loadConfig } from '../core/files.js';
+import { loadConfig, saveConfig } from '../core/files.js';
+import { isV2Config } from '../utils/config-version.js';
 import type { AppshotConfig } from '../types.js';
-
-/**
- * Save configuration to .appshot/config.json
- */
-async function saveConfig(config: AppshotConfig): Promise<void> {
-  const configPath = path.join(process.cwd(), '.appshot', 'config.json');
-  await fs.writeFile(configPath, JSON.stringify(config, null, 2));
-}
 
 export default function fontsCmd(): Command {
   const cmd = new Command('fonts')
@@ -62,7 +53,10 @@ ${pc.bold('Font Variants:')}
   • "Poppins Bold Italic" → Bold + Italic
   
 ${pc.dim('All embedded fonts use OFL or Apache 2.0 licenses.')}
-${pc.dim('Embedded fonts work consistently across all platforms.')}`)
+${pc.dim('Embedded fonts work consistently across all platforms.')}
+${pc.bold('v2 vs v1:')}
+  v2 configs only support a global caption font.
+  Per-device font overrides are legacy and only apply to v1 configs.`)
     .action(async (options) => {
       const fontService = FontService.getInstance();
 
@@ -313,23 +307,35 @@ async function handleSetFont(fontName: string, deviceName: string | undefined, f
     // Load current config
     const config = await loadConfig();
 
+    if (isV2Config(config)) {
+      if (deviceName) {
+        console.log(pc.yellow('Per-device fonts are not supported in v2. Setting global caption font instead.'));
+      }
+      config.caption.font = fontName;
+      await saveConfig(config);
+      console.log(pc.green('✓'), `Set caption font to "${fontName}"`);
+      return;
+    }
+
+    const v1Config = config as AppshotConfig;
+
     if (deviceName) {
       // Set device-specific font
-      if (!config.devices[deviceName]) {
+      if (!v1Config.devices[deviceName]) {
         console.error(pc.red(`Device "${deviceName}" not found in configuration`));
-        console.log(pc.dim('Available devices: ' + Object.keys(config.devices).join(', ')));
+        console.log(pc.dim('Available devices: ' + Object.keys(v1Config.devices).join(', ')));
         process.exit(1);
       }
 
       // Set device-specific font
-      config.devices[deviceName].captionFont = fontName;
+      v1Config.devices[deviceName].captionFont = fontName;
     } else {
       // Set global font
-      config.caption.font = fontName;
+      v1Config.caption.font = fontName;
     }
 
     // Save config
-    await saveConfig(config);
+    await saveConfig(v1Config);
 
     if (deviceName) {
       console.log(pc.green('✓'), `Set font to "${fontName}" for device: ${deviceName}`);
@@ -350,22 +356,29 @@ async function handleSelectFont(deviceName: string | undefined, fontService: Fon
   try {
     // Load current config to show current font
     const config = await loadConfig();
+    const isV2 = isV2Config(config);
     let currentFont = config.caption.font;
     let isDeviceSpecific = false;
 
+    if (isV2 && deviceName) {
+      console.log(pc.yellow('Per-device fonts are not supported in v2. Using global font.'));
+      deviceName = undefined;
+    }
+
     console.log(pc.bold('\n🎨 Font Selection\n'));
 
-    if (deviceName) {
-      if (!config.devices[deviceName]) {
+    if (!isV2 && deviceName) {
+      const v1Config = config as AppshotConfig;
+      if (!v1Config.devices[deviceName]) {
         console.error(pc.red(`Device "${deviceName}" not found in configuration`));
-        console.log(pc.dim('Available devices: ' + Object.keys(config.devices).join(', ')));
+        console.log(pc.dim('Available devices: ' + Object.keys(v1Config.devices).join(', ')));
         process.exit(1);
       }
       console.log(pc.dim(`Configuring font for device: ${deviceName}`));
 
       // Check if device has specific font, otherwise use global
-      if (config.devices[deviceName].captionFont) {
-        currentFont = config.devices[deviceName].captionFont;
+      if (v1Config.devices[deviceName].captionFont) {
+        currentFont = v1Config.devices[deviceName].captionFont!;
         isDeviceSpecific = true;
       }
     }
@@ -506,14 +519,20 @@ async function handleSelectFont(deviceName: string | undefined, fontService: Fon
     }
 
     // Update config
-    if (deviceName) {
-      config.devices[deviceName].captionFont = selectedFont;
-    } else {
+    if (isV2) {
       config.caption.font = selectedFont;
+      await saveConfig(config);
+    } else {
+      const v1Config = config as AppshotConfig;
+      if (deviceName) {
+        v1Config.devices[deviceName].captionFont = selectedFont;
+      } else {
+        v1Config.caption.font = selectedFont;
+      }
+      await saveConfig(v1Config);
     }
-    await saveConfig(config);
 
-    if (deviceName) {
+    if (deviceName && !isV2) {
       console.log(pc.green('✓'), `Set font to "${selectedFont}" for device: ${deviceName}`);
     } else {
       console.log(pc.green('✓'), `Set caption font to "${selectedFont}"`);

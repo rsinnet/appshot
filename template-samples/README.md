@@ -1,6 +1,8 @@
 # Appshot Template Gallery
 
-Professional screenshot templates for App Store success. Each template provides a complete visual style including backgrounds, device positioning, caption styling, and device-specific optimizations.
+> Note: This gallery documents **v2 templates** (fixed layout modes: header/footer/screenshot-only). Legacy v1 templates are deprecated.
+
+Professional screenshot templates for App Store success. Each template provides a complete visual style including background, layout mode, and caption styling.
 
 ## 🚀 Quick Start
 
@@ -9,111 +11,79 @@ Professional screenshot templates for App Store success. Each template provides 
 appshot quickstart
 
 # Or apply a specific template
-appshot template modern --caption "Your App Name"
+appshot template ocean-header --caption "Your App Name"
 ```
 
 ## 📸 Template Samples
 
-### Modern Template
-![Modern](./gallery/modern-sample.png)
-**Vibrant gradient with floating device**
-- 85% device scale, centered
-- White captions with semi-transparent background
-- Perfect for most apps
-
+### Ocean Header
+![Ocean Header](./gallery/ocean-header-sample.png)
 ```bash
-appshot template modern
+appshot template ocean-header
 ```
 
 ---
 
-### Minimal Template
-![Minimal](./gallery/minimal-sample.png)
-**Soft pastel background with elegant typography**
-- 95% device scale, centered position
-- Teal text with white border accent
-- Clean and simple design
-
+### Sunset Footer
+![Sunset Footer](./gallery/sunset-footer-sample.png)
 ```bash
-appshot template minimal
+appshot template sunset-footer
 ```
 
 ---
 
-### Bold Template
-![Bold](./gallery/bold-sample.png)
-**Dark dramatic gradient with overlay captions**
-- 90% device scale, centered
-- Large overlay captions with white border
-- Great for gaming and entertainment
-
+### Clean Screenshot
+![Clean Screenshot](./gallery/clean-screenshot-sample.png)
 ```bash
-appshot template bold
+appshot template clean-screenshot
 ```
 
 ---
 
-### Nerdy OSS Template
-![Nerdy OSS](./gallery/nerdy-sample.png)
-**Grid-lined midnight theme powered by JetBrains Mono**
-- 92% device scale with overlay captions
-- Auto-detected `background.png` (hex grid + plasma glow)
-- Terminal-inspired palette for developer tools
-
+### Pastel Header
+![Pastel Header](./gallery/pastel-header-sample.png)
 ```bash
-appshot template nerdy
+appshot template pastel-header
 ```
 
 ---
 
-### Elegant Template
-![Elegant](./gallery/elegant-sample.png)
-**Sophisticated monochrome design**
-- 90% device scale (iPhone), 95% base
-- Bottom caption positioning
-- Professional and refined
-
+### Noir Footer
+![Noir Footer](./gallery/noir-footer-sample.png)
 ```bash
-appshot template elegant
+appshot template noir-footer
 ```
 
 ---
 
-### Showcase Template
-![Showcase](./gallery/showcase-sample.png)
-**Features custom backgrounds**
-- Auto-detects background.png
-- 90% device scale, centered
-- Glass-morphism caption effect
-
+### Silver Header
+![Silver Header](./gallery/silver-header-sample.png)
 ```bash
-appshot template showcase
+appshot template silver-header
 ```
 
 ---
 
-### Playful Template
-![Playful](./gallery/playful-sample.png)
-**Bright, fun gradients**
-- 95% device scale
-- Vibrant colors
-- Perfect for games and kids apps
-
+### Tropical Header
+![Tropical Header](./gallery/tropical-header-sample.png)
 ```bash
-appshot template playful
+appshot template tropical-header
 ```
 
 ---
 
-### Corporate Template
-![Corporate](./gallery/corporate-sample.png)
-**Clean, professional look**
-- 85% device scale
-- Left-aligned text
-- Business and productivity apps
-
+### Slate Footer
+![Slate Footer](./gallery/slate-footer-sample.png)
 ```bash
-appshot template corporate
+appshot template slate-footer
+```
+
+---
+
+### Midnight Header
+![Midnight Header](./gallery/midnight-header-sample.png)
+```bash
+appshot template midnight-header
 ```
 
 ## 🎨 Template Comparison
@@ -132,8 +102,8 @@ npm run samples
 This will:
 - Build the CLI
 - Use inputs from `template-samples/screenshots/{iphone|ipad|watch|mac}.png`
-- Regenerate device samples in `iphone/`, `ipad/`, `watch/`, and `mac/` (7 presets each)
-- Regenerate template cards in `gallery/` (e.g., `gallery/modern-sample.png`)
+- Regenerate device samples in `iphone/`, `ipad/`, `watch/`, and `mac/` (9 presets each)
+- Regenerate template cards in `gallery/` (e.g., `gallery/ocean-header-sample.png`)
 - Create the combined `gallery/template-gallery.png`
 
 Open `template-samples/index.html` in a browser to view the gallery and device tabs.
@@ -151,18 +121,20 @@ template-samples/
     ipad.png
     watch.png
     mac.png
-    backgrounds/       # Per-device background.png auto-applied for nerdy preset
-      iphone.png
-      ipad.png
-      watch.png
-      mac.png
-  iphone/              # 7 generated presets for iPhone
-  ipad/                # 7 generated presets for iPad
-  watch/               # 7 generated presets for Watch
-  mac/                 # 7 generated presets for Mac
+  iphone/              # 9 generated presets for iPhone
+  ipad/                # 9 generated presets for iPad
+  watch/               # 9 generated presets for Watch
+  mac/                 # 9 generated presets for Mac
   gallery/
-    modern-sample.png  # Root card previews (iPhone-based)
-    ...                # minimal/bold/elegant/showcase/playful/corporate
+    ocean-header-sample.png
+    sunset-footer-sample.png
+    clean-screenshot-sample.png
+    pastel-header-sample.png
+    noir-footer-sample.png
+    silver-header-sample.png
+    tropical-header-sample.png
+    slate-footer-sample.png
+    midnight-header-sample.png
     template-gallery.png
 ```
 
@@ -172,39 +144,17 @@ Templates are starting points that you can customize:
 
 ```bash
 # 1. Apply a template
-appshot template modern
+appshot template ocean-header
 
 # 2. Fine-tune settings
-appshot style --device iphone
+appshot style
 appshot fonts --set "Poppins Bold"
-appshot caption --device iphone
 
 # 3. Build
 appshot build
 ```
 
-## 📊 Template Specifications
-
-| Template | Base Scale | iPhone Scale | Position | Caption Style |
-|----------|------------|--------------|----------|--------------|
-| Modern | 85% | 85% | 50 (center) | Above, white on black |
-| Minimal | 95% | 95% | 50 (center) | Above, teal with border |
-| Bold | 90% | 90% | 45 (high) | Overlay, white on black |
-| Nerdy OSS | 90% | 92% | 12 (high) | Overlay, JetBrains Mono |
-| Elegant | 95% | 90% | 50 (center) | Below, white on blue |
-| Showcase | 90% | 90% | 50 (center) | Above, white on black |
-| Playful | 95% | 95% | 60 (low) | Above, white on pink |
-| Corporate | 85% | 85% | 50 (center) | Above, dark on white |
-
-### Device-Specific Overrides
-All templates include optimized settings for:
-- **iPhone**: Custom scale and positioning
-- **iPad**: Adjusted for larger screens
-- **Mac**: Desktop-optimized layouts
-- **Watch**: Smaller scale with below captions
-
 ## 📚 Learn More
 
 - [Full Documentation](https://github.com/chrisvanbuskirk/appshot)
-- [Template System Guide](../README.md#template-system)
 - [Command Reference](../README.md#-command-reference)
