@@ -154,10 +154,10 @@ describe('Quickstart Command', () => {
     it('should have valid template options', () => {
       const validTemplateIds = templates.map(t => t.id);
 
-      expect(validTemplateIds).toContain('modern');
-      expect(validTemplateIds).toContain('minimal');
-      expect(validTemplateIds).toContain('bold');
-      expect(validTemplateIds).toContain('nerdy');
+      expect(validTemplateIds).toContain('ocean-header');
+      expect(validTemplateIds).toContain('pastel-header');
+      expect(validTemplateIds).toContain('noir-footer');
+      expect(validTemplateIds).toContain('midnight-header');
       expect(validTemplateIds.length).toBeGreaterThanOrEqual(8);
     });
   });

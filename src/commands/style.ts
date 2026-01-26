@@ -5,45 +5,32 @@ import path from 'path';
 import pc from 'picocolors';
 import { loadConfig } from '../core/files.js';
 import { FontService } from '../services/fonts.js';
-import type { AppshotConfig } from '../types.js';
+import type { AppshotConfig, AppshotConfigV2, LayoutModeV2 } from '../types.js';
+import { detectConfigVersion } from '../utils/config-version.js';
+import { showV1DeprecationBanner } from '../utils/v2-banner.js';
 
 export default function styleCmd() {
   const cmd = new Command('style')
-    .description('Configure device positioning, frame options, and caption styling')
+    .description('Configure v2 layout mode, background, and caption styling (v1 legacy supported)')
     .option('--device <name>', 'device name (iphone, ipad, mac, watch)')
     .option('--reset', 'reset device styling to defaults')
     .addHelpText('after', `
 ${pc.bold('Examples:')}
-  ${pc.dim('# Interactive configuration for iPhone')}
-  $ appshot style --device iphone
+  ${pc.dim('# v2: Pick layout + background + caption color')}
+  $ appshot style
   
-  ${pc.dim('# Reset device to default styling')}
+  ${pc.dim('# v1 legacy: Configure a specific device')}
+  $ appshot style --device iphone
+
+  ${pc.dim('# Reset device to default styling (v1)')}
   $ appshot style --device ipad --reset
   
-  ${pc.dim('# Configure without specifying device (interactive)')}
-  $ appshot style
+${pc.bold('v2 Configs:')}
+  ${pc.cyan('Layout-focused:')} layout mode, gradient/background, caption font + color.
 
-${pc.bold('Configurable Options:')}
-  ${pc.cyan('Frame Options:')}
-  • Partial frame (cut off bottom portion)
-  • Frame offset (15%, 25%, 35%, 50%, or custom)
-  • Frame position (top, center, bottom, or 0-100)
-  • Frame scale (0.5x to 2.0x)
-  
-  ${pc.cyan('Caption Options:')}
-  • Caption font (with embedded fonts)
-  • Caption size override
-  • Caption position (above, below, or overlay)
-  • Caption background (color, opacity, padding)
-  • Caption border (color, width, corner radius)
-  • Auto-sizing based on content
-  • Maximum lines (1-10)
-  • Line height (1.0-2.0)
-  
-${pc.bold('Special Handling:')}
-  ${pc.cyan('Watch:')} Optimized caption positioning and text wrapping
-  ${pc.cyan('iPad:')} Landscape-friendly caption scaling
-  ${pc.cyan('Mac:')} Full-width caption support
+${pc.bold('v1 Legacy Configs:')}
+  Device-level frame positioning, caption positioning, and per-device sizing.
+  ${pc.dim('These controls only apply to v1 configs; v2 ignores layout knobs.')}
   
 ${pc.bold('Output:')}
   Updates device configuration in ${pc.cyan('.appshot/config.json')}`)
@@ -54,6 +41,14 @@ ${pc.bold('Output:')}
 
         // Load current configuration
         const config = await loadConfig();
+        const configVersion = detectConfigVersion(config);
+        if (configVersion === 1) {
+          showV1DeprecationBanner();
+        } else {
+          await runV2StyleFlow(config as AppshotConfigV2);
+          return;
+        }
+        const v1Config = config as AppshotConfig;
 
         // Get device to configure
         let device = opts.device;
@@ -62,17 +57,17 @@ ${pc.bold('Output:')}
             type: 'list',
             name: 'device',
             message: 'Which device would you like to style?',
-            choices: Object.keys(config.devices)
+            choices: Object.keys(v1Config.devices)
           }]);
           device = deviceAnswer.device;
         }
 
-        if (!config.devices[device]) {
+        if (!v1Config.devices[device]) {
           console.error(pc.red(`Device "${device}" not found in configuration`));
           process.exit(1);
         }
 
-        const currentDevice = config.devices[device];
+        const currentDevice = v1Config.devices[device];
 
         // Reset option
         if (opts.reset) {
@@ -80,7 +75,7 @@ ${pc.bold('Output:')}
           delete currentDevice.frameScale;
           delete currentDevice.captionSize;
           delete currentDevice.captionPosition;
-          await saveConfig(config);
+          await saveConfig(v1Config);
           console.log(pc.green('✓'), `Reset styling for ${device}`);
           return;
         }
@@ -91,7 +86,7 @@ ${pc.bold('Output:')}
         console.log(`  Frame position: ${formatFramePosition(currentDevice.framePosition)}`);
         console.log(`  Frame scale: ${currentDevice.frameScale ? `${currentDevice.frameScale * 100}%` : 'Auto'}`);
         console.log(`  Partial frame: ${currentDevice.partialFrame ? `Yes (${currentDevice.frameOffset || 25}% cut)` : 'No'}`);
-        console.log(`  Caption font: ${config.caption.font}`);
+        console.log(`  Caption font: ${v1Config.caption.font}`);
         console.log(`  Caption size: ${currentDevice.captionSize || 'Default'}`);
         console.log(`  Caption position: ${currentDevice.captionPosition || 'Default'}\n`);
 
@@ -259,7 +254,7 @@ ${pc.bold('Output:')}
               { name: 'Custom...', value: 'custom' },
               { name: 'Use global default', value: null }
             ],
-            default: currentDevice.captionSize || config.caption.fontsize
+            default: currentDevice.captionSize || v1Config.caption.fontsize
           }]);
 
           const sizeChoice = sizeAnswer.captionSize;
@@ -285,8 +280,8 @@ ${pc.bold('Output:')}
 
           // Add current font
           fontChoices.push({
-            name: `Current (${config.caption.font})`,
-            value: config.caption.font
+            name: `Current (${v1Config.caption.font})`,
+            value: v1Config.caption.font
           });
 
           // Add separator
@@ -325,7 +320,7 @@ ${pc.bold('Output:')}
             name: 'captionFont',
             message: 'Caption font:',
             choices: fontChoices,
-            default: config.caption.font
+            default: v1Config.caption.font
           }]);
 
           if (fontAnswer.captionFont === 'custom') {
@@ -333,7 +328,7 @@ ${pc.bold('Output:')}
               type: 'input',
               name: 'font',
               message: 'Enter font name:',
-              default: config.caption.font
+              default: v1Config.caption.font
             }]);
             captionFont = customFontAnswer.font;
 
@@ -359,9 +354,9 @@ ${pc.bold('Output:')}
               captionFont = browseFontAnswer.font;
             } else {
               console.log(pc.yellow('Could not detect system fonts'));
-              captionFont = config.caption.font;
+              captionFont = v1Config.caption.font;
             }
-          } else if (fontAnswer.captionFont !== config.caption.font) {
+          } else if (fontAnswer.captionFont !== v1Config.caption.font) {
             captionFont = fontAnswer.captionFont;
           }
 
@@ -376,7 +371,7 @@ ${pc.bold('Output:')}
               { name: 'Overlay on gradient', value: 'overlay' },
               { name: 'Use global default', value: null }
             ],
-            default: currentDevice.captionPosition || config.caption.position || 'above'
+            default: currentDevice.captionPosition || v1Config.caption.position || 'above'
           }]);
 
           captionPosition = posAnswer.captionPosition || undefined;
@@ -437,7 +432,7 @@ ${pc.bold('Output:')}
                 default: 0.8
               }]);
 
-              config.caption.background = {
+              v1Config.caption.background = {
                 color: bgColor,
                 opacity: bgOpacityAnswer.opacity,
                 padding: 25
@@ -449,11 +444,11 @@ ${pc.bold('Output:')}
               type: 'number',
               name: 'sideMargin',
               message: 'Caption side margin (px from edges, default 30):',
-              default: (config.caption.background && (config.caption.background as any).sideMargin) || 30,
+              default: (v1Config.caption.background && (v1Config.caption.background as any).sideMargin) || 30,
               validate: (v) => (v !== undefined && v >= 0 && v <= 100) || 'Enter a value between 0 and 100'
             }]);
-            config.caption.background = {
-              ...(config.caption.background || {}),
+            v1Config.caption.background = {
+              ...(v1Config.caption.background || {}),
               sideMargin: sideMarginAnswer.sideMargin
             };
 
@@ -518,7 +513,7 @@ ${pc.bold('Output:')}
               }]);
               chosenRadius = borderRadiusAnswer.radius;
 
-              config.caption.border = {
+              v1Config.caption.border = {
                 color: borderColor,
                 width: borderWidthAnswer.width,
                 radius: borderRadiusAnswer.radius
@@ -556,8 +551,8 @@ ${pc.bold('Output:')}
 
               // Store radius in border config even without color/width so renderer can use it for background
               if (typeof chosenRadius === 'number') {
-                config.caption.border = {
-                  ...(config.caption.border || {}),
+                v1Config.caption.border = {
+                  ...(v1Config.caption.border || {}),
                   radius: chosenRadius
                 };
               }
@@ -593,7 +588,7 @@ ${pc.bold('Output:')}
                 { name: 'Center', value: 'center' },
                 { name: 'Top', value: 'top' }
               ],
-              default: (config.caption.box && (config.caption.box as any).verticalAlign) || 'center'
+              default: (v1Config.caption.box && (v1Config.caption.box as any).verticalAlign) || 'center'
             }]);
             captionBox.verticalAlign = valignAnswer.verticalAlign;
 
@@ -613,7 +608,7 @@ ${pc.bold('Output:')}
                 type: 'number',
                 name: 'minHeight',
                 message: 'Minimum caption height (px):',
-                default: (config.caption.box && (config.caption.box as any).minHeight) || 100,
+                default: (v1Config.caption.box && (v1Config.caption.box as any).minHeight) || 100,
                 validate: (v) => (v !== undefined && v >= 0 && v <= 4000) || 'Enter a value between 0 and 4000'
               }]);
               captionBox.minHeight = minHeightAnswer.minHeight;
@@ -622,7 +617,7 @@ ${pc.bold('Output:')}
                 type: 'number',
                 name: 'maxHeight',
                 message: 'Maximum caption height (px):',
-                default: (config.caption.box && (config.caption.box as any).maxHeight) || 500,
+                default: (v1Config.caption.box && (v1Config.caption.box as any).maxHeight) || 500,
                 validate: (v) => (v !== undefined && v >= 0 && v <= 8000) || 'Enter a value between 0 and 8000'
               }]);
               captionBox.maxHeight = maxHeightAnswer.maxHeight;
@@ -648,7 +643,7 @@ ${pc.bold('Output:')}
               type: 'number',
               name: 'marginTop',
               message: 'Outer margin above caption (px):',
-              default: (config.caption.box && (config.caption.box as any).marginTop) || 0,
+              default: (v1Config.caption.box && (v1Config.caption.box as any).marginTop) || 0,
               validate: (v) => (v !== undefined && v >= 0 && v <= 400) || 'Enter a value between 0 and 400'
             }]);
             captionBox.marginTop = marginTopAnswer.marginTop;
@@ -657,7 +652,7 @@ ${pc.bold('Output:')}
               type: 'number',
               name: 'marginBottom',
               message: 'Outer margin below device/caption (px):',
-              default: (config.caption.box && (config.caption.box as any).marginBottom) || 0,
+              default: (v1Config.caption.box && (v1Config.caption.box as any).marginBottom) || 0,
               validate: (v) => (v !== undefined && v >= 0 && v <= 400) || 'Enter a value between 0 and 400'
             }]);
             captionBox.marginBottom = marginBottomAnswer.marginBottom;
@@ -695,13 +690,13 @@ ${pc.bold('Output:')}
           delete currentDevice.frameScale;
         }
 
-        if (captionSize && captionSize !== config.caption.fontsize) {
+        if (captionSize && captionSize !== v1Config.caption.fontsize) {
           currentDevice.captionSize = captionSize;
         } else {
           delete currentDevice.captionSize;
         }
 
-        if (captionPosition && captionPosition !== (config.caption.position || 'above')) {
+        if (captionPosition && captionPosition !== (v1Config.caption.position || 'above')) {
           currentDevice.captionPosition = captionPosition;
         } else {
           delete currentDevice.captionPosition;
@@ -714,12 +709,12 @@ ${pc.bold('Output:')}
         }
 
         // Save font to global config (fonts apply globally, not per-device)
-        if (captionFont && captionFont !== config.caption.font) {
-          config.caption.font = captionFont;
+        if (captionFont && captionFont !== v1Config.caption.font) {
+          v1Config.caption.font = captionFont;
         }
 
         // Save configuration
-        await saveConfig(config);
+        await saveConfig(v1Config);
 
         // Success message
         console.log('\n' + pc.green('✓'), 'Device styling updated!');
@@ -768,7 +763,64 @@ function formatFramePosition(position: any): string {
   return String(position);
 }
 
-async function saveConfig(config: AppshotConfig): Promise<void> {
+async function saveConfig(config: AppshotConfig | AppshotConfigV2): Promise<void> {
   const configPath = path.join(process.cwd(), '.appshot', 'config.json');
   await fs.writeFile(configPath, JSON.stringify(config, null, 2));
+}
+
+async function runV2StyleFlow(config: AppshotConfigV2): Promise<void> {
+  console.log(pc.bold('\n🎨 v2 Layout Style'));
+  console.log(pc.dim('Configure layout mode, background, and caption color\n'));
+
+  const layoutAnswer = await inquirer.prompt([{
+    type: 'list',
+    name: 'layout',
+    message: 'Select layout mode:',
+    choices: [
+      { name: 'Header (caption on top)', value: 'header' },
+      { name: 'Footer (caption on bottom)', value: 'footer' },
+      { name: 'Screenshot only', value: 'screenshot-only' }
+    ],
+    default: config.layout
+  }]);
+
+  const gradientPresets = [
+    { name: 'Ocean', value: { colors: ['#00C6FB', '#005BEA'], direction: 'top-bottom' } },
+    { name: 'Sunset', value: { colors: ['#FF5F6D', '#FFC371'], direction: 'top-bottom' } },
+    { name: 'Midnight', value: { colors: ['#0F2027', '#2C5364'], direction: 'top-bottom' } },
+    { name: 'Keep current', value: null }
+  ];
+
+  const gradientAnswer = await inquirer.prompt([{
+    type: 'list',
+    name: 'gradient',
+    message: 'Select background gradient:',
+    choices: gradientPresets,
+    default: gradientPresets.findIndex(p => p.value === null)
+  }]);
+
+  const captionColorAnswer = await inquirer.prompt([{
+    type: 'input',
+    name: 'color',
+    message: 'Caption text color (hex):',
+    default: config.caption.color || '#FFFFFF'
+  }]);
+
+  config.layout = layoutAnswer.layout as LayoutModeV2;
+
+  if (gradientAnswer.gradient) {
+    config.background = {
+      mode: 'gradient',
+      gradient: gradientAnswer.gradient
+    };
+  }
+
+  config.caption = {
+    ...config.caption,
+    color: captionColorAnswer.color
+  };
+
+  await saveConfig(config);
+  console.log('\n' + pc.green('✓'), 'v2 styling updated!');
+  console.log(pc.dim('Run "appshot build" to generate screenshots with new styling'));
 }

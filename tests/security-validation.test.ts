@@ -134,11 +134,12 @@ describe('Security Validation', () => {
 
   describe('validateTemplateId', () => {
     it('should accept valid template IDs', () => {
+      expect(validateTemplateId('ocean-header')).toBe(true);
+      expect(validateTemplateId('pastel-header')).toBe(true);
+      expect(validateTemplateId('noir-footer')).toBe(true);
+      expect(validateTemplateId('silver-header')).toBe(true);
+      expect(validateTemplateId('midnight-header')).toBe(true);
       expect(validateTemplateId('modern')).toBe(true);
-      expect(validateTemplateId('minimal')).toBe(true);
-      expect(validateTemplateId('bold')).toBe(true);
-      expect(validateTemplateId('elegant')).toBe(true);
-      expect(validateTemplateId('nerdy')).toBe(true);
     });
 
     it('should reject invalid template IDs', () => {

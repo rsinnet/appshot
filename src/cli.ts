@@ -8,13 +8,13 @@ import buildCmd from './commands/build.js';
 import specsCmd from './commands/specs.js';
 import checkCmd from './commands/check.js';
 import doctorCmd from './commands/doctor.js';
+import migrateCmd from './commands/migrate.js';
 import presetsCmd from './commands/presets.js';
 import validateCmd from './commands/validate.js';
 import styleCmd from './commands/style.js';
 import gradientsCmd from './commands/gradients.js';
 import backgroundsCmd from './commands/backgrounds.js';
 import fontsCmd from './commands/fonts.js';
-import migrateCmd from './commands/migrate.js';
 import { createCleanCommand } from './commands/clean.js';
 import frameCmd from './commands/frame.js';
 import deviceCmd from './commands/device.js';
@@ -28,6 +28,7 @@ import exportCmd from './commands/export.js';
 import orderCmd from './commands/order.js';
 import mcpCmd from './commands/mcp.js';
 import skillCmd from './commands/skill.js';
+import wizardCmd from './commands/wizard.js';
 import { APP_VERSION } from './version.js';
 
 const program = new Command();
@@ -57,7 +58,7 @@ ${pc.bold('Features:')}
 
 ${pc.bold('Quick Start:')}
   $ appshot quickstart               # Interactive setup with templates
-  $ appshot template modern          # Apply professional template
+  $ appshot template ocean-header    # Apply v2 template
   $ appshot caption --device iphone  # Add captions
   $ appshot build                    # Generate final screenshots
 
@@ -86,6 +87,7 @@ ${pc.bold('Configuration Files:')}
 ${pc.dim('Run \'appshot <command> --help\' for command details.')}`);
 
 program.addCommand(quickstartCmd());
+program.addCommand(wizardCmd());
 program.addCommand(initCmd());
 program.addCommand(templateCmd());
 program.addCommand(presetCmd());
@@ -113,9 +115,9 @@ if (platform() === 'darwin') {
 program.addCommand(specsCmd());
 program.addCommand(checkCmd());
 program.addCommand(doctorCmd());
+program.addCommand(migrateCmd());
 program.addCommand(presetsCmd());
 program.addCommand(validateCmd());
-program.addCommand(migrateCmd());
 program.addCommand(createCleanCommand());
 
 program.showHelpAfterError(pc.dim('\nUse --help for usage.'));

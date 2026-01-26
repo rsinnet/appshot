@@ -1,66 +1,38 @@
 {
-  "output": "./final",
-  "frames": "../frames",
+  "version": 2,
+  "layout": "header",
   "caption": {
-    "font": "SF Pro Display",
-    "fontsize": 60,
-    "color": "#FFFFFF",
-    "align": "center",
-    "position": "above",
-    "paddingTop": 100,
-    "paddingBottom": 60,
-    "background": {
-      "color": "#000000",
-      "opacity": 0.4,
-      "padding": 20,
-      "sideMargin": 30
-    },
-    "border": {
-      "radius": 16
-    },
-    "box": {
-      "autoSize": true,
-      "maxLines": 3,
-      "lineHeight": 1.4,
-      "marginTop": 20,
-      "marginBottom": 20
+    "font": "SF Pro Display Bold",
+    "color": "#FFFFFF"
+  },
+  "background": {
+    "mode": "gradient",
+    "gradient": {
+      "colors": [
+        "#667eea",
+        "#764ba2"
+      ],
+      "direction": "top-bottom"
     }
   },
   "devices": {
     "iphone": {
       "input": "./screenshots/iphone",
-      "resolution": "1290x2796",
-      "autoFrame": true,
-      "frameScale": 0.9,
-      "framePosition": 50
+      "resolution": "1290x2796"
     },
     "ipad": {
       "input": "./screenshots/ipad",
-      "resolution": "2048x2732",
-      "autoFrame": true,
-      "frameScale": 0.9,
-      "framePosition": 50
+      "resolution": "2048x2732"
     },
     "mac": {
       "input": "./screenshots/mac",
-      "resolution": "2880x1800",
-      "autoFrame": true,
-      "frameScale": 0.9,
-      "framePosition": 25
+      "resolution": "2880x1800"
     },
     "watch": {
       "input": "./screenshots/watch",
-      "resolution": "410x502",
-      "autoFrame": false,
-      "preferredFrame": "watch-ultra-2024",
-      "frameScale": 0.85,
-      "framePosition": 30,
-      "captionPosition": "below",
-      "captionSize": 26,
-      "captionBox": {
-        "marginTop": 20,
-        "marginBottom": 0
-      }
+      "resolution": "410x502"
     }
-  }
+  },
+  "output": "./final",
+  "frames": "../frames"
 }

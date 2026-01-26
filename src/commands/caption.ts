@@ -8,6 +8,14 @@ import pc from 'picocolors';
 import type { CaptionsFile, CaptionEntry } from '../types.js';
 import type { OpenAIModel } from '../types/ai.js';
 import { translationService } from '../services/translation.js';
+import { captionEnhancementService } from '../services/caption-enhancement.js';
+import { loadConfig } from '../core/files.js';
+import { detectConfigVersion } from '../utils/config-version.js';
+import { showV1DeprecationBanner } from '../utils/v2-banner.js';
+import { computeCaptionPadding, computeFontSize, computeRegions } from '../core/layouts/math.js';
+import { layoutCaptionText } from '../core/layouts/text-layout.js';
+import { getDeviceStrategyV2 } from '../core/device-strategies/index.js';
+import sharp from 'sharp';
 import {
   loadCaptionHistory,
   saveCaptionHistory,
@@ -16,15 +24,19 @@ import {
   getSuggestions,
   learnFromExistingCaptions
 } from '../utils/caption-history.js';
+import { filenameToCaption } from '../utils/filename-caption.js';
+import { Spinner } from '../utils/spinner.js';
 
 export default function captionCmd() {
   const cmd = new Command('caption')
+    .enablePositionalOptions()
     .description('Interactively add/edit captions for screenshots')
-    .requiredOption('--device <name>', 'device name (iphone|ipad|mac|watch)')
+    .option('--device <name>', 'device name (iphone|ipad|mac|watch)')
     .option('--lang <code>', 'primary language code', 'en')
     .option('--translate', 'enable AI-powered translation')
     .option('--langs <codes>', 'target languages for translation (comma-separated)')
     .option('--model <name>', 'OpenAI model to use', 'gpt-4o-mini')
+    .option('--auto-caption', 'generate captions from filenames (non-interactive)')
     .addHelpText('after', `
 ${pc.bold('Examples:')}
   ${pc.dim('# Add captions for iPhone screenshots')}
@@ -33,6 +45,9 @@ ${pc.bold('Examples:')}
   ${pc.dim('# Add captions with real-time translation')}
   $ appshot caption --device iphone --translate --langs es,fr,de
   
+  ${pc.dim('# Auto-generate captions from filenames and translate')}
+  $ appshot caption --device iphone --auto-caption --translate --langs es,fr
+
   ${pc.dim('# Use specific AI model for translation')}
   $ appshot caption --device ipad --translate --model gpt-4o
   
@@ -52,8 +67,21 @@ ${pc.bold('Supported Languages:')}
   
 ${pc.bold('Requires:')}
   OPENAI_API_KEY environment variable for translation`)
-    .action(async ({ device, lang, translate, langs, model }) => {
+    .action(async ({ device, lang, translate, langs, model, autoCaption }) => {
       try {
+        if (!device) {
+          console.error(pc.red('Error:'), 'Missing required option: --device <name>');
+          process.exit(1);
+        }
+        try {
+          const config = await loadConfig();
+          if (detectConfigVersion(config) === 1) {
+            showV1DeprecationBanner();
+          }
+        } catch {
+          // Ignore config load failures for caption flow.
+        }
+
         const dir = path.join(process.cwd(), 'screenshots', device);
         const captionsFile = path.join(process.cwd(), '.appshot', 'captions', `${device}.json`);
 
@@ -96,18 +124,28 @@ ${pc.bold('Requires:')}
 
         if (translate) {
           if (!translationService.hasApiKey()) {
-            console.error(pc.red('Error:'), 'OpenAI API key not found');
-            console.log(pc.dim('Set the OPENAI_API_KEY environment variable to enable translations'));
-            process.exit(1);
+            if (autoCaption) {
+              console.log(pc.yellow('⚠'), 'OPENAI_API_KEY not found. Skipping translation.');
+              translate = false;
+              targetLanguages = [];
+            } else {
+              console.error(pc.red('Error:'), 'OpenAI API key not found');
+              console.log(pc.dim('Set the OPENAI_API_KEY environment variable to enable translations'));
+              process.exit(1);
+            }
           }
 
           // Parse target languages
           if (langs) {
             targetLanguages = langs.split(',').map((l: string) => l.trim());
+          } else if (autoCaption) {
+            console.error(pc.red('Error:'), 'Missing required option: --langs <codes> for auto-caption translation');
+            process.exit(1);
           } else {
             // Ask for target languages if not provided
             console.log(pc.cyan('\nSelect target languages for translation:'));
-            console.log(pc.dim('Common options: es, fr, de, it, pt, ja, ko, zh-CN'));
+            const supportedLangs = translationService.getSupportedLanguages().map(l => l.code).join(', ');
+            console.log(pc.dim(`Supported: ${supportedLangs}`));
             const langsInput = await autocomplete({
               message: 'Target languages (comma-separated):',
               default: 'es,fr,de',
@@ -119,6 +157,10 @@ ${pc.bold('Requires:')}
           // Validate model selection
           const availableModels = translationService.getAvailableModels();
           if (!availableModels.includes(selectedModel)) {
+            if (autoCaption) {
+              console.error(pc.red('Error:'), `Model "${selectedModel}" is not available for translation.`);
+              process.exit(1);
+            }
             console.log(pc.yellow('\nSelect AI model for translation:'));
             selectedModel = await select({
               message: 'Choose model:',
@@ -135,6 +177,56 @@ ${pc.bold('Requires:')}
           await translationService.loadConfig();
           console.log(pc.green('✓'), `Translation enabled: ${lang} → ${targetLanguages.join(', ')}`);
           console.log(pc.dim(`Using model: ${selectedModel}\n`));
+        }
+
+        if (autoCaption) {
+          console.log(pc.bold(`\nAuto-generating captions for ${device} (${lang}):`));
+
+          const baseCaptions: Record<string, string> = {};
+          for (const file of files) {
+            const baseCaption = filenameToCaption(file);
+            baseCaptions[file] = baseCaption;
+            updateFrequency(history, baseCaption);
+            addToSuggestions(history, baseCaption, device);
+          }
+
+          if (!translate || targetLanguages.length === 0) {
+            for (const [file, baseCaption] of Object.entries(baseCaptions)) {
+              captions[file] = baseCaption;
+            }
+          } else {
+            const spinner = new Spinner({ enabled: process.stdout.isTTY });
+            spinner.start(`Translating ${Object.keys(baseCaptions).length} captions (${lang} → ${targetLanguages.join(', ')})`);
+            let translationsByFile: Record<string, Record<string, string>>;
+            try {
+              translationsByFile = await translationService.translateCaptionsBatch(
+                baseCaptions,
+                targetLanguages,
+                selectedModel
+              );
+              spinner.succeed(`Translated ${Object.keys(baseCaptions).length} captions`);
+            } catch (error) {
+              spinner.fail('Translation failed');
+              throw error;
+            }
+
+            for (const [file, baseCaption] of Object.entries(baseCaptions)) {
+              captions[file] = {} as CaptionEntry;
+              (captions[file] as CaptionEntry)[lang] = baseCaption;
+              const translated = translationsByFile[file] || {};
+              for (const [langCode, translation] of Object.entries(translated)) {
+                (captions[file] as CaptionEntry)[langCode] = translation;
+              }
+            }
+          }
+
+          await fs.mkdir(path.dirname(captionsFile), { recursive: true });
+          await fs.writeFile(captionsFile, JSON.stringify(captions, null, 2), 'utf8');
+          await saveCaptionHistory(history);
+
+          console.log('\n' + pc.green('✓'), `Updated ${path.relative(process.cwd(), captionsFile)}`);
+          console.log(pc.dim('Run'), pc.cyan('appshot build'), pc.dim('to generate screenshots with these captions'));
+          return;
         }
 
         console.log(pc.bold(`\nAdding captions for ${device} (${lang}):`));
@@ -245,5 +337,300 @@ ${pc.bold('Requires:')}
       }
     });
 
+  cmd.command('enhance')
+    .description('Enhance existing captions using OpenAI (no translation)')
+    .option('--device <name>', 'device name (iphone|ipad|mac|watch)')
+    .option('--lang <code>', 'primary language code', 'en')
+    .option('--langs <codes>', 'languages to enhance (comma-separated)')
+    .option('--model <name>', 'OpenAI model to use', 'gpt-5-mini')
+    .option('--dry-run', 'preview changes without writing')
+    .addHelpText('after', `
+${pc.bold('Examples:')}
+  ${pc.dim('# Enhance English captions for iPhone')}
+  $ appshot caption enhance --device iphone
+
+  ${pc.dim('# Enhance specific languages only')}
+  $ appshot caption enhance --device ipad --langs en,fr
+
+  ${pc.dim('# Use GPT-5 model explicitly')}
+  $ appshot caption enhance --device mac --model gpt-5-mini
+
+${pc.bold('Notes:')}
+  • Enhances existing captions only; does not translate
+  • Requires OPENAI_API_KEY
+`)
+    .action(async (options, command) => {
+      try {
+        const { device, lang, langs, model, dryRun } = options as {
+          device?: string;
+          lang: string;
+          langs?: string;
+          model: string;
+          dryRun?: boolean;
+        };
+        const parent = command?.parent;
+        const parentOpts = parent?.opts?.() ?? {};
+        const parentDevice = parentOpts.device as string | undefined;
+        const resolvedDevice = device ?? parentDevice;
+        const resolvedLang =
+          command?.getOptionValueSource?.('lang') === 'default' && parentOpts.lang
+            ? (parentOpts.lang as string)
+            : (lang ?? 'en');
+        const resolvedModel =
+          command?.getOptionValueSource?.('model') === 'default' && parentOpts.model
+            ? (parentOpts.model as string)
+            : (model ?? 'gpt-5-mini');
+        const resolvedLangs = (langs ?? parentOpts.langs) as string | undefined;
+        const resolvedDryRun = (dryRun ?? parentOpts.dryRun ?? false) as boolean;
+
+        if (!resolvedDevice) {
+          console.error(pc.red('Error:'), 'Missing required option: --device <name>');
+          process.exit(1);
+        }
+        const config = await loadConfig();
+        if (detectConfigVersion(config) === 1) {
+          showV1DeprecationBanner();
+          console.error(pc.red('Error:'), 'Caption enhancement requires v2 config. Run appshot migrate first.');
+          process.exit(1);
+        }
+
+        if (!captionEnhancementService.hasApiKey()) {
+          console.error(pc.red('Error:'), 'OpenAI API key not found');
+          console.log(pc.dim('Set the OPENAI_API_KEY environment variable to enable caption enhancement'));
+          process.exit(1);
+        }
+
+        const selectedModel = resolvedModel as OpenAIModel;
+        if (!selectedModel.startsWith('gpt-5')) {
+          console.error(pc.red('Error:'), 'Caption enhancement requires a GPT-5 model (e.g., gpt-5-mini).');
+          process.exit(1);
+        }
+
+        const targetLanguages = resolvedLangs
+          ? resolvedLangs.split(',').map((l: string) => l.trim()).filter(Boolean)
+          : [resolvedLang];
+
+        const deviceKey = resolvedDevice.toLowerCase();
+        if (!['iphone', 'ipad', 'mac', 'watch'].includes(deviceKey)) {
+          console.error(pc.red('Error:'), 'Device must be one of: iphone, ipad, mac, watch');
+          process.exit(1);
+        }
+
+        const deviceEntry = (config as any).devices?.[deviceKey];
+        if (!deviceEntry) {
+          console.error(pc.red('Error:'), `Device "${deviceKey}" not found in config`);
+          process.exit(1);
+        }
+
+        const inputDir = typeof deviceEntry === 'string' ? deviceEntry : deviceEntry.input;
+        const resolution = typeof deviceEntry === 'object' ? deviceEntry.resolution : undefined;
+        const { width: outputWidth, height: outputHeight } = await resolveOutputSize(
+          inputDir,
+          resolution,
+          deviceKey as 'iphone' | 'ipad' | 'mac' | 'watch'
+        );
+
+        const layout = (config as any).layout || 'header';
+        const constraintLayout = layout === 'screenshot-only' ? 'header' : layout;
+        const strategy = getDeviceStrategyV2(deviceKey as 'iphone' | 'ipad' | 'mac' | 'watch');
+        const regions = computeRegions({
+          canvasWidth: outputWidth,
+          canvasHeight: outputHeight,
+          layout: constraintLayout,
+          strategy
+        });
+        const captionRegion = regions.caption ?? {
+          x: 0,
+          y: 0,
+          width: outputWidth,
+          height: Math.max(strategy.minCaptionPx, Math.round(outputHeight * strategy.captionRatio))
+        };
+        const fontSize = computeFontSize(outputHeight, strategy);
+        const maxLines = strategy.captionMaxLines;
+        const maxChars = estimateMaxChars(captionRegion.width, captionRegion.height, fontSize, maxLines);
+
+        const captionsFile = path.join(process.cwd(), '.appshot', 'captions', `${deviceKey}.json`);
+        let captions: CaptionsFile = {};
+        try {
+          const content = await fs.readFile(captionsFile, 'utf8');
+          captions = JSON.parse(content);
+        } catch {
+          console.error(pc.red('Error:'), `Captions file not found for ${deviceKey}`);
+          process.exit(1);
+        }
+
+        let updated = 0;
+        let skipped = 0;
+
+        const fileMapByLang = new Map<string, Record<string, string>>();
+        const singleLangMap: Record<string, string> = {};
+
+        for (const [file, entry] of Object.entries(captions)) {
+          if (typeof entry === 'string') {
+            if (targetLanguages.includes(resolvedLang)) {
+              singleLangMap[file] = entry;
+            }
+            continue;
+          }
+          if (entry && typeof entry === 'object') {
+            const entryObj = entry as CaptionEntry;
+            for (const targetLang of targetLanguages) {
+              const original = entryObj[targetLang];
+              if (!original) {
+                continue;
+              }
+              const bucket = fileMapByLang.get(targetLang) ?? {};
+              bucket[file] = original;
+              fileMapByLang.set(targetLang, bucket);
+            }
+          }
+        }
+
+        if (Object.keys(singleLangMap).length > 0) {
+          const existing = fileMapByLang.get(resolvedLang) ?? {};
+          fileMapByLang.set(resolvedLang, { ...existing, ...singleLangMap });
+        }
+
+        for (const [targetLang, fileMap] of fileMapByLang.entries()) {
+          if (Object.keys(fileMap).length === 0) {
+            continue;
+          }
+
+          const spinner = new Spinner({ enabled: process.stdout.isTTY });
+          spinner.start(`Enhancing ${Object.keys(fileMap).length} captions (${targetLang})`);
+          let enhancedMap: Record<string, string>;
+          try {
+            enhancedMap = await captionEnhancementService.enhanceBatch({
+              captions: fileMap,
+              language: targetLang,
+              model: selectedModel,
+              maxLines,
+              maxChars,
+              deviceType: deviceKey,
+              layout: constraintLayout,
+              attempt: 1
+            });
+            spinner.succeed(`Enhanced ${Object.keys(fileMap).length} captions (${targetLang})`);
+          } catch (error) {
+            spinner.fail(`Enhancement failed (${targetLang})`);
+            throw error;
+          }
+
+          const truncated: Record<string, string> = {};
+          for (const [file, enhanced] of Object.entries(enhancedMap)) {
+            const fitCheck = layoutCaptionText(enhanced, captionRegion, fontSize, strategy);
+            if (fitCheck.truncated) {
+              truncated[file] = enhanced;
+            }
+          }
+
+          let finalMap = enhancedMap;
+          if (Object.keys(truncated).length > 0) {
+            const retrySpinner = new Spinner({ enabled: process.stdout.isTTY });
+            retrySpinner.start(`Shortening ${Object.keys(truncated).length} captions (${targetLang})`);
+            let shorterMap: Record<string, string>;
+            try {
+              shorterMap = await captionEnhancementService.enhanceBatch({
+                captions: truncated,
+                language: targetLang,
+                model: selectedModel,
+                maxLines,
+                maxChars: Math.max(10, Math.floor(maxChars * 0.85)),
+                deviceType: deviceKey,
+                layout: constraintLayout,
+                attempt: 2
+              });
+              retrySpinner.succeed(`Shortened ${Object.keys(truncated).length} captions (${targetLang})`);
+            } catch (error) {
+              retrySpinner.fail(`Shortening failed (${targetLang})`);
+              throw error;
+            }
+            finalMap = { ...enhancedMap, ...shorterMap };
+          }
+
+          for (const [file, enhanced] of Object.entries(finalMap)) {
+            const original = fileMap[file];
+            if (!enhanced || enhanced === original) {
+              skipped++;
+              continue;
+            }
+
+            if (!resolvedDryRun) {
+              const entry = captions[file];
+              if (typeof entry === 'string') {
+                captions[file] = enhanced;
+              } else if (entry && typeof entry === 'object') {
+                (entry as CaptionEntry)[targetLang] = enhanced;
+              }
+            }
+            updated++;
+            console.log(pc.green('✓'), `${file} (${targetLang})`, pc.dim('→'), enhanced);
+          }
+        }
+
+        if (!resolvedDryRun && updated > 0) {
+          await fs.writeFile(captionsFile, JSON.stringify(captions, null, 2), 'utf8');
+        }
+
+        console.log('\n' + pc.green('✓'), `Enhanced ${updated} caption(s)`);
+        if (skipped > 0) {
+          console.log(pc.dim(`Skipped ${skipped} caption(s) (missing language or unchanged).`));
+        }
+        if (resolvedDryRun) {
+          console.log(pc.dim('Dry run: no files were modified.'));
+        }
+      } catch (error) {
+        console.error(pc.red('Error:'), error instanceof Error ? error.message : String(error));
+        process.exit(1);
+      }
+    });
+
   return cmd;
+}
+
+async function resolveOutputSize(
+  inputDir: string,
+  resolution: string | undefined,
+  deviceType: 'iphone' | 'ipad' | 'mac' | 'watch'
+): Promise<{ width: number; height: number }> {
+  if (resolution) {
+    const [configWidth, configHeight] = resolution.split('x').map(Number);
+    return {
+      width: Math.min(configWidth, configHeight),
+      height: Math.max(configWidth, configHeight)
+    };
+  }
+
+  try {
+    const files = (await fs.readdir(inputDir)).filter(f => f.match(/\.(png|jpg|jpeg)$/i));
+    if (files.length > 0) {
+      const sample = path.join(inputDir, files[0]);
+      const metadata = await sharp(sample).metadata();
+      if (metadata.width && metadata.height) {
+        return {
+          width: metadata.width,
+          height: metadata.height
+        };
+      }
+    }
+  } catch {
+    // Fall back to defaults below
+  }
+
+  const defaults: Record<string, { width: number; height: number }> = {
+    iphone: { width: 1290, height: 2796 },
+    ipad: { width: 2048, height: 2732 },
+    mac: { width: 2880, height: 1800 },
+    watch: { width: 410, height: 502 }
+  };
+
+  return defaults[deviceType];
+}
+
+function estimateMaxChars(regionWidth: number, regionHeight: number, fontSize: number, maxLines: number): number {
+  const padding = computeCaptionPadding(regionHeight);
+  const maxWidth = Math.max(0, regionWidth - padding * 2);
+  const avgCharWidth = Math.max(1, fontSize * 0.55);
+  const charsPerLine = Math.max(5, Math.floor(maxWidth / avgCharWidth));
+  return Math.max(charsPerLine, charsPerLine * maxLines);
 }

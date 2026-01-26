@@ -5,19 +5,21 @@ import pc from 'picocolors';
 import inquirer from 'inquirer';
 import {
   getTemplate,
-  getTemplateCaptionSuggestions
+  getTemplateCaptionSuggestions,
+  resolveTemplateId,
+  applyTemplateToConfig
 } from '../templates/registry.js';
 import {
   validateTemplateId,
   sanitizeCaption,
   validateDeviceArray
 } from '../utils/validation.js';
-import type { AppshotConfig } from '../types.js';
+import type { AppshotConfigV2 } from '../types.js';
 
 export default function quickstartCmd() {
   const cmd = new Command('quickstart')
     .description('Get started with App Store screenshots in seconds')
-    .option('--template <id>', 'template to use (default: modern)')
+    .option('--template <id>', 'template to use (default: ocean-header)')
     .option('--caption <text>', 'main caption for screenshots')
     .option('--no-interactive', 'skip interactive prompts')
     .option('--force', 'overwrite existing configuration')
@@ -33,19 +35,21 @@ ${pc.bold('Examples:')}
   $ appshot quickstart
   
   ${pc.dim('# With specific template')}
-  $ appshot quickstart --template minimal
+  $ appshot quickstart --template pastel-header
   
   ${pc.dim('# Non-interactive with caption')}
-  $ appshot quickstart --template bold --caption "Amazing App" --no-interactive
+  $ appshot quickstart --template noir-footer --caption "Amazing App" --no-interactive
 
-${pc.bold('Templates:')}
-  ${pc.cyan('modern')}    - Eye-catching gradient (default)
-  ${pc.cyan('minimal')}   - Clean and simple
-  ${pc.cyan('bold')}      - Dark and dramatic
-  ${pc.cyan('elegant')}   - Professional monochrome
-  ${pc.cyan('showcase')}  - Feature your backgrounds
-  ${pc.cyan('playful')}   - Bright and fun
-  ${pc.cyan('corporate')} - Business professional`)
+${pc.bold('Templates (v2):')}
+  ${pc.cyan('ocean-header')}     - Cool blue gradient, header layout (default)
+  ${pc.cyan('sunset-footer')}    - Warm sunset gradient, footer layout
+  ${pc.cyan('clean-screenshot')} - Minimal, screenshot-only layout
+  ${pc.cyan('pastel-header')}    - Soft pastel gradient, header layout
+  ${pc.cyan('noir-footer')}      - Dark dramatic gradient, footer layout
+  ${pc.cyan('silver-header')}    - Elegant silver gradient, header layout
+  ${pc.cyan('tropical-header')}  - Bright tropical gradient, header layout
+  ${pc.cyan('slate-footer')}     - Professional slate gradient, footer layout
+  ${pc.cyan('midnight-header')}  - Deep blue gradient, header layout`)
     .action(async (opts) => {
       try {
         console.log(pc.cyan(`
@@ -73,14 +77,14 @@ ${pc.bold('Templates:')}
         }
 
         // Interactive or direct mode
-        let templateId = opts.template || 'modern';
+        let templateId = opts.template || 'ocean-header';
         let caption = opts.caption;
         let devices = ['iphone', 'ipad'];
 
         // Validate template if provided
         if (opts.template && !validateTemplateId(opts.template)) {
           console.error(pc.red(`Template "${opts.template}" not found`));
-          console.log(pc.dim('Available templates: modern, minimal, bold, elegant, showcase, playful, corporate, nerdy'));
+          console.log(pc.dim('Run "appshot template --list" to see available templates'));
           process.exit(1);
         }
 
@@ -102,13 +106,15 @@ ${pc.bold('Templates:')}
               name: 'template',
               message: 'Choose a visual style:',
               choices: [
-                { name: '🎨 Modern - Vibrant gradient with floating device', value: 'modern' },
-                { name: '⚪ Minimal - Clean and simple', value: 'minimal' },
-                { name: '⚫ Bold - Dark and dramatic', value: 'bold' },
-                { name: '✨ Elegant - Professional monochrome', value: 'elegant' },
-                { name: '🖼️ Showcase - Custom backgrounds', value: 'showcase' },
-                { name: '🎮 Playful - Bright and fun', value: 'playful' },
-                { name: '💼 Corporate - Business professional', value: 'corporate' }
+                { name: '🌊 Ocean Header - Cool blue gradient', value: 'ocean-header' },
+                { name: '🌅 Sunset Footer - Warm gradient', value: 'sunset-footer' },
+                { name: '🧼 Clean Screenshot - Minimal', value: 'clean-screenshot' },
+                { name: '🍑 Pastel Header - Soft gradient', value: 'pastel-header' },
+                { name: '🕶️ Noir Footer - Dark dramatic', value: 'noir-footer' },
+                { name: '🤍 Silver Header - Elegant', value: 'silver-header' },
+                { name: '🍍 Tropical Header - Bright playful', value: 'tropical-header' },
+                { name: '🧱 Slate Footer - Professional', value: 'slate-footer' },
+                { name: '🌌 Midnight Header - Deep blue', value: 'midnight-header' }
               ],
               default: templateId
             },
@@ -144,6 +150,12 @@ ${pc.bold('Templates:')}
         } catch (err) {
           console.error(pc.red(`Invalid devices: ${err instanceof Error ? err.message : 'Unknown error'}`));
           process.exit(1);
+        }
+
+        const resolved = resolveTemplateId(templateId);
+        if (resolved.isAlias) {
+          console.log(pc.yellow(`⚠ Legacy template \"${templateId}\" mapped to \"${resolved.id}\"`));
+          templateId = resolved.id;
         }
 
         // Step 1: Initialize project structure
@@ -235,30 +247,27 @@ async function initializeProject(devices: string[]) {
 /**
  * Apply template and create configuration
  */
-async function applyTemplate(templateId: string, devices: string[]): Promise<AppshotConfig> {
-  const template = getTemplate(templateId);
+async function applyTemplate(templateId: string, devices: string[]): Promise<AppshotConfigV2> {
+  const resolved = resolveTemplateId(templateId);
+  const template = getTemplate(resolved.id);
   if (!template) {
     throw new Error(`Template "${templateId}" not found`);
   }
 
-  // Create base configuration
-  const baseConfig: AppshotConfig = {
+  const baseConfig: AppshotConfigV2 = {
+    version: 2,
     output: './final',
     frames: './frames',
-    background: template.background,
+    layout: template.layout,
     caption: {
-      font: template.captionStyle.font || 'SF Pro Display',
-      fontsize: template.captionStyle.fontsize || 64,
-      color: template.captionStyle.color || '#FFFFFF',
-      align: template.captionStyle.align || 'center',
-      paddingTop: 100,
-      paddingBottom: 60,
-      ...template.captionStyle
+      font: template.caption.font || 'SF Pro Display',
+      color: template.caption.color || '#FFFFFF',
+      background: template.caption.background
     },
+    background: template.background,
     devices: {}
   };
 
-  // Device-specific resolutions
   const resolutions: Record<string, string> = {
     iphone: '1290x2796',
     ipad: '2048x2732',
@@ -266,36 +275,14 @@ async function applyTemplate(templateId: string, devices: string[]): Promise<App
     watch: '410x502'
   };
 
-  // Add device configurations
   for (const device of devices) {
-    const deviceOverride = template.deviceOverrides?.[device as keyof typeof template.deviceOverrides];
-
     baseConfig.devices[device] = {
       input: `./screenshots/${device}`,
-      resolution: resolutions[device] || '1290x2796',
-      autoFrame: true,
-      frameScale: deviceOverride?.frameScale || template.deviceStyle.frameScale,
-      framePosition: deviceOverride?.framePosition ?? template.deviceStyle.framePosition,
-      partialFrame: deviceOverride?.partialFrame ?? template.deviceStyle.partialFrame,
-      frameOffset: deviceOverride?.frameOffset ?? template.deviceStyle.frameOffset,
-      captionPosition: deviceOverride?.captionPosition ?? template.captionStyle.position
+      resolution: resolutions[device] || '1290x2796'
     };
-
-    // Add caption size override for specific devices
-    if (deviceOverride?.captionSize) {
-      baseConfig.devices[device].captionSize = deviceOverride.captionSize;
-    }
-
-    // Special handling for watch
-    if (device === 'watch') {
-      baseConfig.devices[device].captionFont = 'SF Pro';
-      if (!deviceOverride?.captionSize) {
-        baseConfig.devices[device].captionSize = 36;
-      }
-    }
   }
 
-  return baseConfig;
+  return applyTemplateToConfig(resolved.id, baseConfig);
 }
 
 /**

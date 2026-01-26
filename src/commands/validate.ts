@@ -5,6 +5,8 @@ import pc from 'picocolors';
 import sharp from 'sharp';
 import { validateResolution, recommendPreset, getRequiredPresets } from '../core/app-store-specs.js';
 import { loadConfig } from '../core/files.js';
+import { isV2Config } from '../utils/config-version.js';
+import type { AppshotConfigV2 } from '../types.js';
 
 export default function validateCmd() {
   const cmd = new Command('validate')
@@ -20,6 +22,112 @@ export default function validateCmd() {
 
         const config = await loadConfig();
         const results: ValidationResult[] = [];
+
+        if (isV2Config(config)) {
+          const v2Config = config as AppshotConfigV2;
+          const configuredResolutions = new Map<string, Set<string>>();
+
+          for (const [deviceKey, deviceConfig] of Object.entries(v2Config.devices)) {
+            const deviceType = deviceKey.split('-')[0].split('_')[0];
+            const inputDir = typeof deviceConfig === 'string' ? deviceConfig : deviceConfig.input;
+
+            if (typeof deviceConfig === 'object' && deviceConfig.resolution) {
+              if (!configuredResolutions.has(deviceType)) {
+                configuredResolutions.set(deviceType, new Set());
+              }
+              configuredResolutions.get(deviceType)!.add(deviceConfig.resolution);
+            }
+
+            const inputPath = path.resolve(inputDir);
+            try {
+              await fs.access(inputPath);
+            } catch {
+              results.push({
+                device: deviceKey,
+                status: 'error',
+                message: `Input directory not found: ${inputPath}`
+              });
+              continue;
+            }
+
+            const screenshots = (await fs.readdir(inputPath))
+              .filter(f => f.match(/\.(png|jpg|jpeg)$/i));
+
+            if (screenshots.length === 0) {
+              results.push({
+                device: deviceKey,
+                status: 'warning',
+                message: 'No screenshots found'
+              });
+              continue;
+            }
+
+            for (const screenshot of screenshots) {
+              const screenshotPath = path.join(inputPath, screenshot);
+              const metadata = await sharp(screenshotPath).metadata();
+              if (!metadata.width || !metadata.height) {
+                results.push({
+                  device: deviceKey,
+                  status: 'warning',
+                  message: `⚠ ${screenshot}: Unable to determine dimensions`
+                });
+                continue;
+              }
+
+              const resolution = `${metadata.width}x${metadata.height}`;
+              if (!configuredResolutions.has(deviceType)) {
+                configuredResolutions.set(deviceType, new Set());
+              }
+              configuredResolutions.get(deviceType)!.add(resolution);
+
+              const isValid = validateResolution(metadata.width, metadata.height, deviceType);
+              const recommended = recommendPreset(metadata.width, metadata.height, deviceType);
+
+              if (isValid) {
+                results.push({
+                  device: deviceKey,
+                  status: 'valid',
+                  message: `✓ ${screenshot}: ${resolution} - Matches ${recommended?.name || 'App Store specs'}`
+                });
+              } else {
+                results.push({
+                  device: deviceKey,
+                  status: 'invalid',
+                  message: `✗ ${screenshot}: ${resolution} - Not a valid App Store resolution`,
+                  fix: opts.fix ? await suggestFix(metadata.width, metadata.height, deviceType) : undefined
+                });
+              }
+            }
+          }
+
+          if (opts.json) {
+            const requiredCheck = opts.strict ? checkRequiredPresetsFromResolutionsJson(configuredResolutions) : null;
+            const output = {
+              results,
+              summary: {
+                valid: results.filter(r => r.status === 'valid').length,
+                invalid: results.filter(r => r.status === 'invalid').length,
+                warnings: results.filter(r => r.status === 'warning').length,
+                errors: results.filter(r => r.status === 'error').length
+              },
+              requiredPresets: requiredCheck
+            };
+            console.log(JSON.stringify(output, null, 2));
+
+            if (output.summary.invalid > 0 || output.summary.errors > 0) {
+              process.exit(1);
+            }
+          } else {
+            displayResults(results);
+
+            if (opts.strict) {
+              console.log(pc.bold('\n📋 Required Presets Check:\n'));
+              checkRequiredPresetsFromResolutions(configuredResolutions);
+            }
+          }
+
+          return;
+        }
 
         // Check each device configuration
         for (const [deviceKey, deviceConfig] of Object.entries(config.devices)) {
@@ -264,6 +372,60 @@ function checkRequiredPresetsJson(config: any) {
         configured.has(`${category}-${preset.resolutions.portrait}`);
       const hasLandscape = preset.resolutions.landscape &&
         configured.has(`${category}-${preset.resolutions.landscape}`);
+
+      return {
+        id: preset.id,
+        name: preset.name,
+        displaySize: preset.displaySize,
+        satisfied: hasPortrait || hasLandscape,
+        missing: {
+          portrait: !hasPortrait && preset.resolutions.portrait ? preset.resolutions.portrait : null,
+          landscape: !hasLandscape && preset.resolutions.landscape ? preset.resolutions.landscape : null
+        }
+      };
+    });
+  }
+
+  return result;
+}
+
+function checkRequiredPresetsFromResolutions(configured: Map<string, Set<string>>) {
+  const required = getRequiredPresets();
+
+  for (const [category, presets] of Object.entries(required)) {
+    if (presets.length === 0) continue;
+
+    console.log(pc.cyan(`${category.toUpperCase()}:`));
+    const deviceResolutions = configured.get(category) ?? new Set<string>();
+
+    for (const preset of presets) {
+      const hasPortrait = preset.resolutions.portrait && deviceResolutions.has(preset.resolutions.portrait);
+      const hasLandscape = preset.resolutions.landscape && deviceResolutions.has(preset.resolutions.landscape);
+
+      const status = (hasPortrait || hasLandscape) ? pc.green('✓') : pc.red('✗');
+      console.log(`  ${status} ${preset.name} (${preset.displaySize})`);
+
+      if (!hasPortrait && preset.resolutions.portrait) {
+        console.log(pc.dim(`    Missing portrait: ${preset.resolutions.portrait}`));
+      }
+      if (!hasLandscape && preset.resolutions.landscape) {
+        console.log(pc.dim(`    Missing landscape: ${preset.resolutions.landscape}`));
+      }
+    }
+  }
+}
+
+function checkRequiredPresetsFromResolutionsJson(configured: Map<string, Set<string>>) {
+  const required = getRequiredPresets();
+  const result: any = {};
+
+  for (const [category, presets] of Object.entries(required)) {
+    if (presets.length === 0) continue;
+
+    const deviceResolutions = configured.get(category) ?? new Set<string>();
+    result[category] = presets.map(preset => {
+      const hasPortrait = preset.resolutions.portrait && deviceResolutions.has(preset.resolutions.portrait);
+      const hasLandscape = preset.resolutions.landscape && deviceResolutions.has(preset.resolutions.landscape);
 
       return {
         id: preset.id,

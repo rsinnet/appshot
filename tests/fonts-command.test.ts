@@ -15,7 +15,8 @@ vi.mock('fs', () => ({
 
 // Mock config loading
 vi.mock('../src/core/files.js', () => ({
-  loadConfig: vi.fn()
+  loadConfig: vi.fn(),
+  saveConfig: vi.fn()
 }));
 
 // Mock inquirer for interactive tests
@@ -106,6 +107,7 @@ describe('fonts command', () => {
   let mockPrompt: any;
   let mockWriteFile: any;
   let mockLoadConfig: any;
+  let mockSaveConfig: any;
 
   const mockConfig = {
     output: './final',
@@ -129,11 +131,14 @@ describe('fonts command', () => {
     
     mockWriteFile = fs.promises.writeFile;
     mockLoadConfig = files.loadConfig;
+    mockSaveConfig = files.saveConfig;
     mockPrompt = inquirer.default.prompt;
     
     // Setup mock implementations
     mockLoadConfig.mockResolvedValue(mockConfig);
     mockWriteFile.mockResolvedValue(undefined);
+    mockSaveConfig.mockResolvedValue(undefined);
+    mockSaveConfig.mockClear();
     
     program = new Command();
     program.exitOverride(); // Prevent process.exit during tests
@@ -325,12 +330,8 @@ describe('fonts command', () => {
     it('should set global font', async () => {
       await program.parseAsync(['node', 'test', 'fonts', '--set', 'Helvetica']);
       
-      expect(mockWriteFile).toHaveBeenCalledOnce();
-      const [configPath, configContent] = mockWriteFile.mock.calls[0];
-      // Handle platform-specific path separators
-      expect(configPath).toMatch(/\.appshot[/\\]config\.json/);
-      
-      const savedConfig = JSON.parse(configContent);
+      expect(mockSaveConfig).toHaveBeenCalledOnce();
+      const savedConfig = mockSaveConfig.mock.calls[0][0];
       expect(savedConfig.caption.font).toBe('Helvetica');
       
       const output = mockConsoleLog.mock.calls.map(call => call.join(' ')).join('\n');
@@ -341,10 +342,8 @@ describe('fonts command', () => {
     it('should set device-specific font', async () => {
       await program.parseAsync(['node', 'test', 'fonts', '--set', 'SF Pro', '--device', 'iphone']);
       
-      expect(mockWriteFile).toHaveBeenCalledOnce();
-      const [, configContent] = mockWriteFile.mock.calls[0];
-      
-      const savedConfig = JSON.parse(configContent);
+      expect(mockSaveConfig).toHaveBeenCalledOnce();
+      const savedConfig = mockSaveConfig.mock.calls[0][0];
       expect(savedConfig.devices.iphone.captionFont).toBe('SF Pro');
       expect(savedConfig.caption.font).toBe('Arial'); // Global should remain unchanged
       

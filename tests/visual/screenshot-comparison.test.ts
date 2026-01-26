@@ -211,6 +211,51 @@ describe.skipIf(!shouldRunVisualTests)('Visual Screenshot Tests', () => {
       // Watch screenshots get scaled up by 130%
       expect(metadata.width).toBeGreaterThan(396);
     });
+    it('should render v2 header/footer/screenshot-only layouts', async () => {
+      const cliPath = path.join(__dirname, '../../dist/cli.js');
+      const configPath = path.join(TEST_DIR, '.appshot/config.json');
+
+      await sharp({
+        create: {
+          width: 1290,
+          height: 2796,
+          channels: 4,
+          background: { r: 80, g: 120, b: 160, alpha: 1 }
+        }
+      })
+      .png()
+      .toFile(path.join(SCREENSHOTS_DIR, 'iphone', 'solid.png'));
+
+      await fs.writeFile(
+        path.join(TEST_DIR, '.appshot/captions/iphone.json'),
+        JSON.stringify({ 'solid.png': 'V2 Layout Test' }, null, 2)
+      );
+
+      const config = JSON.parse(await fs.readFile(configPath, 'utf-8'));
+      config.version = 2;
+      config.background = {
+        mode: 'gradient',
+        gradient: { colors: ['#111111', '#333333'], direction: 'top-bottom' }
+      };
+      config.caption = { font: 'SF Pro Display', color: '#FFFFFF' };
+
+      const layouts: Array<'header' | 'footer' | 'screenshot-only'> = ['header', 'footer', 'screenshot-only'];
+
+      for (const layout of layouts) {
+        config.layout = layout;
+        await fs.writeFile(configPath, JSON.stringify(config, null, 2));
+
+        await execAsync(`node ${cliPath} clean --yes`, { cwd: TEST_DIR });
+        await execAsync(`node ${cliPath} build --devices iphone --no-frame`, {
+          cwd: TEST_DIR,
+          env: { ...process.env, APPSHOT_DISABLE_FONT_SCAN: '1' }
+        });
+
+        const outputPath = path.join(FINAL_DIR, 'iphone', 'solid.png');
+        const outputExists = await fs.access(outputPath).then(() => true).catch(() => false);
+        expect(outputExists).toBe(true);
+      }
+    });
   });
 
   describe('Pixel Comparison', () => {

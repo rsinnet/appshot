@@ -188,33 +188,33 @@ describe('MCP CLI argument builders', () => {
 
   it('creates template args with template ID and options', () => {
     expect(createTemplateArgs({ list: true })).toEqual(['template', '--list']);
-    expect(createTemplateArgs({ template: 'modern' })).toEqual(['template', 'modern']);
+    expect(createTemplateArgs({ template: 'ocean-header' })).toEqual(['template', 'ocean-header']);
     expect(createTemplateArgs({
-      template: 'bold',
+      template: 'noir-footer',
       caption: 'Hello World',
       device: 'iphone',
       dryRun: true
     })).toEqual([
-      'template', 'bold', '--caption', 'Hello World', '--device', 'iphone', '--dry-run'
+      'template', 'noir-footer', '--caption', 'Hello World', '--device', 'iphone', '--dry-run'
     ]);
     expect(createTemplateArgs({
-      preview: 'elegant',
+      preview: 'silver-header',
       noBackup: true
-    })).toEqual(['template', '--preview', 'elegant', '--no-backup']);
+    })).toEqual(['template', '--preview', 'silver-header', '--no-backup']);
   });
 
   it('creates quickstart args with template and caption', () => {
     expect(createQuickstartArgs({})).toEqual(['quickstart']);
-    expect(createQuickstartArgs({ template: 'modern' })).toEqual([
-      'quickstart', '--template', 'modern'
+    expect(createQuickstartArgs({ template: 'ocean-header' })).toEqual([
+      'quickstart', '--template', 'ocean-header'
     ]);
     expect(createQuickstartArgs({
-      template: 'bold',
+      template: 'noir-footer',
       caption: 'My App',
       force: true,
       noInteractive: true
     })).toEqual([
-      'quickstart', '--template', 'bold', '--caption', 'My App', '--no-interactive', '--force'
+      'quickstart', '--template', 'noir-footer', '--caption', 'My App', '--no-interactive', '--force'
     ]);
   });
 });

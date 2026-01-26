@@ -207,6 +207,8 @@ Output has transparent background - perfect for presentations, design comps, or 
 
 ## Configuration Options
 
+> Note: The options below describe **v1 legacy layout controls**. v2 uses fixed layout modes and removes manual positioning. See `docs/layout-v2.md`.
+
 ### Frame Positioning
 - `frameScale`: 0.1-1.5 (default: 0.9)
 - `framePosition`: 0-100 or "center"
@@ -219,7 +221,9 @@ Output has transparent background - perfect for presentations, design comps, or 
 
 ## Resources
 
-- `references/templates.md` - All 8 templates with styles, colors, and recommendations
+- `references/templates.md` - Legacy v1 templates (modern/minimal/etc.)
+- `docs/layout-v2.md` - v2 fixed-layout rules (header/footer/screenshot-only)
+- `docs/migration-v2.md` - v1 to v2 migration guide
 - `references/gradients.md` - All 24 gradient presets with colors
 - `references/fonts.md` - All 10 embedded font families
 - `references/troubleshooting.md` - Common errors and solutions

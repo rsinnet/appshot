@@ -73,7 +73,7 @@ describe.skip('Performance Benchmarks - SLOW TESTS', { timeout: 120000 }, () => 
 
   describe('Template Application Performance', () => {
     it('should apply template within 3 seconds', async () => {
-      const { duration } = await runWithTiming('template modern');
+      const { duration } = await runWithTiming('template ocean-header');
 
       expect(duration).toBeLessThan(3000);
 
@@ -83,7 +83,7 @@ describe.skip('Performance Benchmarks - SLOW TESTS', { timeout: 120000 }, () => 
     });
 
     it('should apply all templates quickly', async () => {
-      const templates = ['modern', 'minimal', 'bold', 'elegant', 'nerdy', 'showcase', 'playful', 'corporate'];
+      const templates = ['ocean-header', 'pastel-header', 'noir-footer', 'silver-header', 'midnight-header', 'clean-screenshot', 'tropical-header', 'slate-footer'];
       const times: number[] = [];
 
       for (const template of templates) {
@@ -220,7 +220,7 @@ describe.skip('Performance Benchmarks - SLOW TESTS', { timeout: 120000 }, () => 
       await fs.writeFile(path.join(testDir, '.appshot/captions/iphone.json'),
         JSON.stringify(captions, null, 2));
 
-      const { duration } = await runWithTiming('preset modern --devices iphone');
+      const { duration } = await runWithTiming('preset ocean-header --devices iphone');
 
       // Preset (template + build) should complete reasonably fast
       expect(duration).toBeLessThan(15000); // 15 seconds for template + 3 screenshots
@@ -231,7 +231,7 @@ describe.skip('Performance Benchmarks - SLOW TESTS', { timeout: 120000 }, () => 
     });
 
     it('should handle dry-run instantly', async () => {
-      const { duration } = await runWithTiming('preset modern --devices iphone --dry-run');
+      const { duration } = await runWithTiming('preset ocean-header --devices iphone --dry-run');
 
       // Dry run should be nearly instant
       expect(duration).toBeLessThan(1000);
@@ -254,7 +254,7 @@ describe.skip('Performance Benchmarks - SLOW TESTS', { timeout: 120000 }, () => 
           JSON.stringify(captions, null, 2));
       }
 
-      const { duration } = await runWithTiming('preset elegant --devices iphone,ipad,watch');
+      const { duration } = await runWithTiming('preset silver-header --devices iphone,ipad,watch');
 
       // 6 total screenshots across 3 devices
       expect(duration).toBeLessThan(25000); // 25 seconds total
@@ -312,7 +312,7 @@ describe.skip('Performance Benchmarks - SLOW TESTS', { timeout: 120000 }, () => 
     });
 
     it('should run quickstart quickly', async () => {
-      const { duration } = await runWithTiming('quickstart --force --template modern');
+      const { duration } = await runWithTiming('quickstart --force --template ocean-header');
 
       // Quickstart should be fast
       expect(duration).toBeLessThan(3000);

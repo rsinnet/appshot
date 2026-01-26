@@ -68,14 +68,14 @@ describe.skip('Template Commands Integration', { timeout: 30000 }, () => {
       const { stdout } = await runAppshot('template --list');
 
       // Should show all templates
-      expect(stdout).toContain('modern');
-      expect(stdout).toContain('minimal');
-      expect(stdout).toContain('bold');
-      expect(stdout).toContain('elegant');
-      expect(stdout).toContain('nerdy');
-      expect(stdout).toContain('showcase');
-      expect(stdout).toContain('playful');
-      expect(stdout).toContain('corporate');
+      expect(stdout).toContain('ocean-header');
+      expect(stdout).toContain('pastel-header');
+      expect(stdout).toContain('noir-footer');
+      expect(stdout).toContain('silver-header');
+      expect(stdout).toContain('midnight-header');
+      expect(stdout).toContain('clean-screenshot');
+      expect(stdout).toContain('tropical-header');
+      expect(stdout).toContain('slate-footer');
 
       // Should show categories
       expect(stdout).toContain('MODERN');
@@ -84,26 +84,24 @@ describe.skip('Template Commands Integration', { timeout: 30000 }, () => {
     });
 
     it('should preview a template without applying', async () => {
-      const { stdout } = await runAppshot('template --preview modern');
+      const { stdout } = await runAppshot('template --preview ocean-header');
 
-      expect(stdout).toContain('Modern Vibrant');
-      expect(stdout).toContain('Eye-catching gradient');
-      expect(stdout).toContain('Preview Only');
+      expect(stdout).toContain('Ocean Header');
+      expect(stdout).toContain('Ocean Header');
 
       // Config should not be modified
       const config = JSON.parse(await fs.readFile(path.join(testDir, '.appshot/config.json'), 'utf-8'));
-      expect(config.gradient?.preset).toBeUndefined();
+      expect(config.layout).toBeDefined();
     });
 
     it('should apply a template to configuration', async () => {
-      await runAppshot('template modern');
+      await runAppshot('template ocean-header');
 
       const config = JSON.parse(await fs.readFile(path.join(testDir, '.appshot/config.json'), 'utf-8'));
 
-      // Should have modern template settings
-      expect(config.gradient.colors).toEqual(['#667eea', '#764ba2', '#f093fb']);
-      expect(config.caption.font).toBe('Poppins');
-      expect(config.caption.fontsize).toBe(72);
+      // Should have ocean-header template settings
+      expect(config.layout).toBe('header');
+      expect(config.caption.font).toBeDefined();
     });
 
     it('should handle invalid template gracefully', async () => {
@@ -134,31 +132,24 @@ describe.skip('Template Commands Integration', { timeout: 30000 }, () => {
         expect(config).toBeTruthy();
 
         // Template-specific checks
-        if (template.config.gradient) {
-          expect(config.gradient).toBeDefined();
+        if (template.background) {
+          expect(config.background).toBeDefined();
         }
-        if (template.config.caption) {
-          expect(config.caption.font).toBeDefined();
-        }
+        expect(config.caption.font).toBeDefined();
       }
     });
 
-    it('should preserve device-specific overrides', async () => {
-      // Set device-specific config
+    it('should preserve device input paths', async () => {
       const configPath = path.join(testDir, '.appshot/config.json');
       const config = JSON.parse(await fs.readFile(configPath, 'utf-8'));
-      config.devices.iphone.captionFont = 'CustomFont';
-      config.devices.iphone.frameScale = 0.7;
+      config.devices.iphone.input = './screenshots/custom-iphone';
       await fs.writeFile(configPath, JSON.stringify(config, null, 2));
 
-      // Apply template
-      await runAppshot('template elegant');
+      await runAppshot('template silver-header');
 
-      // Check that device overrides are preserved
       const newConfig = JSON.parse(await fs.readFile(configPath, 'utf-8'));
-      expect(newConfig.devices.iphone.captionFont).toBe('CustomFont');
-      expect(newConfig.devices.iphone.frameScale).toBe(0.7);
-      expect(newConfig.caption.font).toBe('Playfair Display'); // From template
+      expect(newConfig.devices.iphone.input).toBe('./screenshots/custom-iphone');
+      expect(newConfig.caption.font).toBeDefined();
     });
   });
 
@@ -170,11 +161,11 @@ describe.skip('Template Commands Integration', { timeout: 30000 }, () => {
     });
 
     it('should run preset in dry-run mode', async () => {
-      const { stdout, stderr } = await runAppshot('preset modern --devices iphone --dry-run');
+      const { stdout, stderr } = await runAppshot('preset ocean-header --devices iphone --dry-run');
 
       expect(stderr).toBeFalsy();
       expect(stdout).toContain('Dry Run Mode');
-      expect(stdout).toContain('Modern Vibrant');
+      expect(stdout).toContain('Ocean Header');
       expect(stdout).toContain('Devices: iphone');
 
       // Should not create output files
@@ -191,13 +182,13 @@ describe.skip('Template Commands Integration', { timeout: 30000 }, () => {
         'test.png': 'Test Caption'
       }, null, 2));
 
-      const { stdout, stderr } = await runAppshot('preset minimal --devices iphone --verbose');
+      const { stdout, stderr } = await runAppshot('preset pastel-header --devices iphone --verbose');
 
       if (stderr) {
         console.error('Preset stderr:', stderr);
       }
 
-      expect(stdout).toContain('Applying template: minimal');
+      expect(stdout).toContain('Preset');
       expect(stdout).toContain('Building screenshots');
 
       // Check output was created
@@ -222,9 +213,9 @@ describe.skip('Template Commands Integration', { timeout: 30000 }, () => {
       await fs.writeFile(path.join(testDir, '.appshot/captions/ipad.json'),
         JSON.stringify({ 'test.png': 'iPad Test' }, null, 2));
 
-      const { stdout } = await runAppshot('preset bold --devices iphone,ipad');
+      const { stdout } = await runAppshot('preset noir-footer --devices iphone,ipad');
 
-      expect(stdout).toContain('Bold Impact');
+      expect(stdout).toContain('Noir Footer');
 
       // Check both device outputs
       const iphoneOutput = await fs.access(path.join(testDir, 'final/iphone/en/test.png'))
@@ -247,7 +238,7 @@ describe.skip('Template Commands Integration', { timeout: 30000 }, () => {
         }
       }, null, 2));
 
-      const { stdout } = await runAppshot('preset elegant --devices iphone --langs en,es,fr');
+      const { stdout } = await runAppshot('preset silver-header --devices iphone --langs en,es,fr');
 
       // Check all language outputs
       const enOutput = await fs.access(path.join(testDir, 'final/iphone/en/test.png'))
@@ -263,7 +254,7 @@ describe.skip('Template Commands Integration', { timeout: 30000 }, () => {
     });
 
     it('should add caption to all screenshots', async () => {
-      const { stdout } = await runAppshot('preset modern --devices iphone --caption "Universal Caption"');
+      const { stdout } = await runAppshot('preset ocean-header --devices iphone --caption "Universal Caption"');
 
       // Check caption was added to config
       const captions = JSON.parse(
@@ -284,7 +275,7 @@ describe.skip('Template Commands Integration', { timeout: 30000 }, () => {
 
     it('should sanitize malicious device input', async () => {
       try {
-        await runAppshot('preset modern --devices "iphone; rm -rf /" --dry-run');
+        await runAppshot('preset ocean-header --devices "iphone; rm -rf /" --dry-run');
         expect.fail('Command should have failed with invalid device');
       } catch (error: any) {
         const output = error.stderr || error.stdout || error.message;
@@ -297,7 +288,7 @@ describe.skip('Template Commands Integration', { timeout: 30000 }, () => {
 
     it('should sanitize malicious language input', async () => {
       try {
-        await runAppshot('preset modern --devices iphone --langs "en; echo hacked" --dry-run');
+        await runAppshot('preset ocean-header --devices iphone --langs "en; echo hacked" --dry-run');
         expect.fail('Command should have failed with invalid language');
       } catch (error: any) {
         const output = error.stderr || error.stdout || error.message;
@@ -309,9 +300,9 @@ describe.skip('Template Commands Integration', { timeout: 30000 }, () => {
 
   describe('Quickstart Command', () => {
     it('should handle non-interactive force mode', async () => {
-      const { stdout } = await runAppshot('quickstart --force --template modern --no-interactive');
+      const { stdout } = await runAppshot('quickstart --force --template ocean-header --no-interactive');
 
-      expect(stdout).toContain('modern');
+      expect(stdout).toContain('ocean-header');
 
       // Check that template was applied
       const config = JSON.parse(await fs.readFile(path.join(testDir, '.appshot/config.json'), 'utf-8'));
@@ -378,14 +369,14 @@ describe.skip('Template Commands Integration', { timeout: 30000 }, () => {
     });
 
     it('should apply selected template', async () => {
-      const { stdout } = await runAppshot('quickstart --force --template nerdy --no-interactive');
+      const { stdout } = await runAppshot('quickstart --force --template midnight-header --no-interactive');
 
       const config = JSON.parse(await fs.readFile(path.join(testDir, '.appshot/config.json'), 'utf-8'));
 
-      // Should have nerdy template settings
-      expect(config.caption.font).toBe('JetBrains Mono Bold');
-      expect(config.caption.position).toBe('overlay');
-      expect(config.background?.mode).toBe('auto');  // nerdy uses auto background
+      // Should have midnight-header template settings
+      expect(config.caption.font).toBe('SF Pro Display Bold');
+      expect(config.layout).toBe('header');
+      expect(config.background?.mode).toBe('gradient');
     });
 
     it.skip('should handle all valid template options', async () => {
@@ -410,7 +401,7 @@ describe.skip('Template Commands Integration', { timeout: 30000 }, () => {
   describe('End-to-End Template Workflow', () => {
     it('should complete full workflow: quickstart → add screenshots → build', async () => {
       // Step 1: Quickstart with template
-      await runAppshot('quickstart --force --template modern --no-interactive');
+      await runAppshot('quickstart --force --template ocean-header --no-interactive');
 
       // Step 2: Add test screenshots
       await createTestScreenshot('iphone', 'home.png');
@@ -454,7 +445,7 @@ describe.skip('Template Commands Integration', { timeout: 30000 }, () => {
       await createTestScreenshot('iphone');
 
       // Apply preset and build
-      await runAppshot('preset elegant --devices iphone --caption "Elegant App"');
+      await runAppshot('preset silver-header --devices iphone --caption "Elegant App"');
 
       // Validate output
       const { stdout } = await runAppshot('validate');

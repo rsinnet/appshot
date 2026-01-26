@@ -5,7 +5,8 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import sharp from 'sharp';
 import { gradientPresets, getGradientCategories, getGradientsByCategory, getGradientPreset } from '../core/gradient-presets.js';
-import { loadConfig } from '../core/files.js';
+import { loadConfig, saveConfig } from '../core/files.js';
+import { isV2Config } from '../utils/config-version.js';
 import { renderGradient } from '../core/render.js';
 
 /**
@@ -179,15 +180,21 @@ ${pc.dim('Gradients update .appshot/config.json')}`)
           // Load current config
           const config = await loadConfig();
 
-          // Update gradient settings
-          config.gradient = {
-            colors: gradient.colors,
-            direction: gradient.direction
-          };
+          if (isV2Config(config)) {
+            config.background = config.background ?? {};
+            config.background.mode = 'gradient';
+            config.background.gradient = {
+              colors: gradient.colors,
+              direction: gradient.direction
+            };
+          } else {
+            config.gradient = {
+              colors: gradient.colors,
+              direction: gradient.direction
+            };
+          }
 
-          // Save config
-          const configPath = path.join(process.cwd(), '.appshot', 'config.json');
-          await fs.writeFile(configPath, JSON.stringify(config, null, 2));
+          await saveConfig(config);
 
           console.log(pc.green('✓'), `Applied "${gradient.name}" gradient`);
           console.log(pc.dim(`Colors: ${gradient.colors.join(' → ')}`));
@@ -261,13 +268,21 @@ ${pc.dim('Gradients update .appshot/config.json')}`)
         if (confirmAnswer.apply) {
           // Load and update config
           const config = await loadConfig();
-          config.gradient = {
-            colors: selectedGradient.colors,
-            direction: selectedGradient.direction
-          };
+          if (isV2Config(config)) {
+            config.background = config.background ?? {};
+            config.background.mode = 'gradient';
+            config.background.gradient = {
+              colors: selectedGradient.colors,
+              direction: selectedGradient.direction
+            };
+          } else {
+            config.gradient = {
+              colors: selectedGradient.colors,
+              direction: selectedGradient.direction
+            };
+          }
 
-          const configPath = path.join(process.cwd(), '.appshot', 'config.json');
-          await fs.writeFile(configPath, JSON.stringify(config, null, 2));
+          await saveConfig(config);
 
           console.log(pc.green('✓'), 'Gradient applied successfully!');
           console.log('\nRun', pc.cyan('appshot build'), 'to generate screenshots with the new gradient');

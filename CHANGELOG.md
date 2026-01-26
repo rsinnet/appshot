@@ -4,6 +4,25 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+## [2.0.0] - 2026-01-25
+
+### ✨ Added
+- **Layout v2 Engine:** Fixed caption/device zones with three layouts (header, footer, screenshot-only)
+- **Config v2:** New `version: 2` schema focused on styling (fonts/colors/backgrounds) with deterministic layout rules
+- **Device Strategies:** Per-device ratios, font sizes, line limits, and padding constants
+- **Migration Command:** `appshot migrate` converts v1 configs to v2 with warnings + backups
+
+### 🔄 Changed
+- **Templates:** Replaced v1 template IDs with v2 presets (`ocean-header`, `sunset-footer`, `clean-screenshot`, `pastel-header`, `noir-footer`, `silver-header`, `tropical-header`, `slate-footer`, `midnight-header`)
+- **Quickstart/Style:** v2 flows now choose layout + gradient + caption color; positioning knobs removed
+- **Compose:** New `composeV2()` path with v1 preserved for compatibility
+
+### ⚠️ Deprecated
+- **v1 Layout Options:** `caption.position`, `framePosition`, `frameScale`, `caption.box.*`, and overlay mode
+- **Legacy Template IDs:** v1 template names remain as deprecated aliases
+
 ## [1.0.3] - 2025-01-21
 
 ### ✨ Added

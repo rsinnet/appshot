@@ -34,7 +34,7 @@ describe('Command Integration Tests', { timeout: 30000 }, () => {
       await run('init --force');
 
       // Apply template
-      const { stdout, stderr } = await run('template modern');
+      const { stdout, stderr } = await run('template ocean-header');
       expect(stderr || '').toBe('');
       expect(stdout.toLowerCase()).toContain('applied');
 
@@ -42,18 +42,18 @@ describe('Command Integration Tests', { timeout: 30000 }, () => {
       const config = JSON.parse(
         await fs.readFile(path.join(testDir, '.appshot/config.json'), 'utf-8')
       );
-      expect(config.background?.gradient?.colors).toEqual(['#667eea', '#764ba2', '#f093fb']);
-      expect(config.caption.font).toBe('SF Pro Display');
+      expect(config.background?.gradient?.colors).toEqual(['#00C6FB', '#005BEA']);
+      expect(config.caption.font).toBe('SF Pro Display Bold');
     });
 
     it('should list templates', async () => {
       await run('init --force');
       const { stdout } = await run('template --list');
 
-      expect(stdout).toContain('modern');
-      expect(stdout).toContain('minimal');
-      expect(stdout).toContain('bold');
-      expect(stdout).toContain('nerdy');
+      expect(stdout).toContain('ocean-header');
+      expect(stdout).toContain('pastel-header');
+      expect(stdout).toContain('noir-footer');
+      expect(stdout).toContain('midnight-header');
     });
 
     it('should handle invalid template', async () => {
@@ -83,11 +83,11 @@ describe('Command Integration Tests', { timeout: 30000 }, () => {
         }
       }).png().toFile(screenshotPath);
 
-      const { stdout, stderr } = await run('preset modern --devices iphone --dry-run');
+      const { stdout, stderr } = await run('preset ocean-header --devices iphone --dry-run');
 
       expect(stderr || '').toBe('');
       expect(stdout).toContain('Dry Run Mode');
-      expect(stdout).toContain('Modern Vibrant');
+      expect(stdout).toContain('Ocean Header');
 
       // Should not create output files
       const finalExists = await fs.access(path.join(testDir, 'final'))
@@ -99,7 +99,7 @@ describe('Command Integration Tests', { timeout: 30000 }, () => {
       await run('init --force');
 
       try {
-        await run('preset modern --devices "iphone; rm -rf /" --dry-run');
+        await run('preset ocean-header --devices "iphone; rm -rf /" --dry-run');
         expect.fail('Should have failed');
       } catch (error: any) {
         const output = error.stderr || error.stdout || '';
@@ -114,10 +114,10 @@ describe('Command Integration Tests', { timeout: 30000 }, () => {
 
   describe('Quickstart Command', () => {
     it('should work in non-interactive mode', async () => {
-      const { stdout, stderr } = await run('quickstart --force --template modern --no-interactive');
+      const { stdout, stderr } = await run('quickstart --force --template ocean-header --no-interactive');
 
       expect(stderr || '').toBe('');
-      expect(stdout).toContain('modern');
+      expect(stdout).toContain('ocean-header');
 
       // Verify config was created
       const config = JSON.parse(
@@ -173,7 +173,7 @@ describe('Command Integration Tests', { timeout: 30000 }, () => {
   describe('End-to-End Workflow', () => {
     it('should complete basic workflow', async () => {
       // Initialize with template
-      await run('quickstart --force --template minimal --no-interactive');
+      await run('quickstart --force --template pastel-header --no-interactive');
 
       // Create screenshot
       await sharp({
@@ -224,7 +224,7 @@ describe('Command Integration Tests', { timeout: 30000 }, () => {
       await run('init --force');
 
       try {
-        await run('preset modern --devices "../../etc" --dry-run');
+        await run('preset ocean-header --devices "../../etc" --dry-run');
         expect.fail('Should have failed');
       } catch (error: any) {
         const output = error.stderr || error.stdout || '';

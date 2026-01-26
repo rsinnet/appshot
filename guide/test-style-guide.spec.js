@@ -1,6 +1,7 @@
 /**
  * Playwright Test Suite for AppShot Style Guide
- * Tests all new features including presets, grid overlay, frame opacity, watch bands, and export
+ * Tests legacy v1 style guide features (framePosition, frameScale, overlay, etc.).
+ * This file is kept for reference only; v2 does not use these controls.
  */
 
 const { test, expect } = require('@playwright/test');

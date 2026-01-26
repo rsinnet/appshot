@@ -5,9 +5,13 @@ import pc from 'picocolors';
 import sharp from 'sharp';
 import { loadConfig, loadCaptions } from '../core/files.js';
 import { autoSelectFrame, getImageDimensions, initializeFrameRegistry } from '../core/devices.js';
-import { composeAppStoreScreenshot } from '../core/compose.js';
+import { composeAppStoreScreenshot, composeV2 } from '../core/compose.js';
 import { resolveLanguages, normalizeLanguageCode } from '../utils/language.js';
 import { filenameToCaption } from '../utils/filename-caption.js';
+import type { AppshotConfig, AppshotConfigV2 } from '../types.js';
+import { detectConfigVersion } from '../utils/config-version.js';
+import { showV1DeprecationBanner } from '../utils/v2-banner.js';
+import { Spinner } from '../utils/spinner.js';
 
 export default function buildCmd() {
   const cmd = new Command('build')
@@ -65,6 +69,10 @@ ${pc.bold('Examples:')}
 
 ${pc.bold('Output:')}
   Screenshots are saved to: ${pc.cyan('final/[device]/[language]/')}
+
+${pc.bold('v2 Layouts:')}
+  Layout modes: header, footer, screenshot-only
+  v1 configs are deprecated; run ${pc.cyan('appshot migrate')} to upgrade
   
 ${pc.bold('Language Detection:')}
   1. --langs parameter (if provided)
@@ -73,6 +81,8 @@ ${pc.bold('Language Detection:')}
   4. System locale
   5. Fallback to 'en'`)
     .action(async (opts) => {
+      let spinner: Spinner | null = null;
+      let showSpinner = false;
       try {
         const logo = String.raw`     _                       _           _   
     / \   _ __  _ __  ___| |__   ___ | |_ 
@@ -87,40 +97,58 @@ ${pc.bold('Language Detection:')}
         } else {
           console.log(pc.cyan(logo));
           console.log(pc.bold('\nBuilding screenshots...'));
-          // Layout behavior note for 0.9.0
-          console.log(
-            pc.yellow('\n⚠ Layout behavior notice (v0.9.0):') +
-            pc.dim('\n  • "below/above" captions now enforce a minimum optical gap from the device, and will adjust placement to remain truly below/above.') +
-            pc.dim('\n  • Overlay captions anchor to the bottom of their outer box (padding/border included); explicit zeros are respected.') +
-            pc.dim('\n  • In edge cases where device + caption cannot both fit, the engine adapts placement; visuals may differ from 0.8.x.') +
-            '\n'
-          );
         }
 
         // Load configuration
         const config = await loadConfig(opts.config);
+        const configVersion = detectConfigVersion(config);
+        const isV2 = configVersion === 2;
+        if (configVersion === 1) {
+          showV1DeprecationBanner();
+          if (!opts.dryRun) {
+            console.log(
+              pc.yellow('\n⚠ Layout behavior notice (v0.9.0):') +
+              pc.dim('\n  • "below/above" captions now enforce a minimum optical gap from the device, and will adjust placement to remain truly below/above.') +
+              pc.dim('\n  • Overlay captions anchor to the bottom of their outer box (padding/border included); explicit zeros are respected.') +
+              pc.dim('\n  • In edge cases where device + caption cannot both fit, the engine adapts placement; visuals may differ from 0.8.x.') +
+              '\n'
+            );
+          }
+        }
+
+        const configV1 = config as AppshotConfig;
+        const configV2 = config as AppshotConfigV2;
         const devices = opts.devices.split(',').map((d: string) => d.trim());
         const concurrency = parseInt(opts.concurrency, 10);
 
         // Initialize frame registry from Frames.json if available
-        await initializeFrameRegistry(path.resolve(config.frames));
+        const framesDir = isV2 ? (configV2.frames || './frames') : configV1.frames;
+        await initializeFrameRegistry(path.resolve(framesDir));
 
         // Ensure output directory exists
-        await fs.mkdir(config.output, { recursive: true });
+        const outputRoot = isV2 ? (configV2.output || './final') : configV1.output;
+        await fs.mkdir(outputRoot, { recursive: true });
 
+        showSpinner = !opts.verbose && !opts.dryRun && process.stdout.isTTY;
+        spinner = new Spinner({ enabled: showSpinner });
         let totalProcessed = 0;
         let totalErrors = 0;
+        let totalTasks = 0;
 
         // Process each device
         for (const device of devices) {
-          if (!config.devices[device]) {
+          const deviceEntry = isV2 ? configV2.devices[device] : configV1.devices[device];
+          if (!deviceEntry) {
             console.log(pc.yellow('⚠'), `Device '${device}' not configured in appshot.json`);
             continue;
           }
 
-          const deviceConfig = config.devices[device];
-          const inputDir = path.resolve(deviceConfig.input);
-          const outputDir = path.join(config.output, device);
+          const deviceConfig = isV2 ? undefined : deviceEntry;
+          const inputPath = isV2
+            ? (typeof deviceEntry === 'string' ? deviceEntry : deviceEntry.input)
+            : (deviceConfig as AppshotConfig['devices'][string]).input;
+          const inputDir = path.resolve(inputPath);
+          const outputDir = path.join(outputRoot, device);
 
           // Check if input directory exists
           try {
@@ -155,6 +183,10 @@ ${pc.bold('Language Detection:')}
           console.log(pc.cyan(`\n${device}:`), `${opts.dryRun ? 'Would process' : 'Processing'} ${screenshots.length} screenshots`);
           if (!cliLangs) {
             console.log(pc.dim(`  Using language: ${languages.join(', ')} (from ${source})`));
+          }
+          totalTasks += screenshots.length * languages.length;
+          if (showSpinner) {
+            spinner?.update(`Preparing ${totalTasks} render(s)...`);
           }
 
           // Process each language
@@ -203,31 +235,40 @@ ${pc.bold('Language Detection:')}
                         .toBuffer();
                     } catch (error) {
                       console.error(pc.red(`  ✗ ${path.basename(inputPath)}`), `Failed to load screenshot: ${error instanceof Error ? error.message : String(error)}`);
+                      totalErrors++;
+                      totalProcessed++;
+                      if (showSpinner) {
+                        spinner?.update(`Rendering ${totalProcessed}/${totalTasks} • ${device}/${lang} ${screenshot}`);
+                      }
                       return;
                     }
                   }
 
-                  // Parse resolution for output dimensions
-                  const [configWidth, configHeight] = deviceConfig.resolution.split('x').map(Number);
+                  const resolution = isV2
+                    ? (typeof deviceEntry === 'string' ? undefined : deviceEntry.resolution)
+                    : (deviceConfig as AppshotConfig['devices'][string]).resolution;
 
-                  // Ensure output dimensions match screenshot orientation
                   let outWidth: number;
                   let outHeight: number;
 
-                  if (orientation === 'portrait') {
-                    // For portrait, ensure height > width
-                    outWidth = Math.min(configWidth, configHeight);
-                    outHeight = Math.max(configWidth, configHeight);
-                  } else {
-                    // For landscape, ensure width > height
-                    outWidth = Math.max(configWidth, configHeight);
-                    outHeight = Math.min(configWidth, configHeight);
-                  }
+                  if (resolution) {
+                    const [configWidth, configHeight] = resolution.split('x').map(Number);
 
-                  // Warn if orientation mismatch detected
-                  const configOrientation = configWidth > configHeight ? 'landscape' : 'portrait';
-                  if (configOrientation !== orientation) {
-                    console.log(pc.yellow('    ⚠'), pc.dim(`Config specifies ${configOrientation} (${deviceConfig.resolution}) but screenshot is ${orientation} - auto-adjusting`));
+                    if (orientation === 'portrait') {
+                      outWidth = Math.min(configWidth, configHeight);
+                      outHeight = Math.max(configWidth, configHeight);
+                    } else {
+                      outWidth = Math.max(configWidth, configHeight);
+                      outHeight = Math.min(configWidth, configHeight);
+                    }
+
+                    const configOrientation = configWidth > configHeight ? 'landscape' : 'portrait';
+                    if (configOrientation !== orientation) {
+                      console.log(pc.yellow('    ⚠'), pc.dim(`Config specifies ${configOrientation} (${resolution}) but screenshot is ${orientation} - auto-adjusting`));
+                    }
+                  } else {
+                    outWidth = srcWidth;
+                    outHeight = srcHeight;
                   }
 
                   // Auto-select frame if enabled
@@ -241,9 +282,9 @@ ${pc.bold('Language Detection:')}
                     // Otherwise, auto-select a frame
                     const result = await autoSelectFrame(
                       inputPath,
-                      path.resolve(config.frames),
+                      path.resolve(framesDir),
                       device as 'iphone' | 'ipad' | 'mac' | 'watch',
-                      deviceConfig.preferredFrame,
+                      isV2 ? undefined : (deviceConfig as AppshotConfig['devices'][string]).preferredFrame,
                       opts.dryRun // Pass dry-run flag
                     );
 
@@ -281,12 +322,22 @@ ${pc.bold('Language Detection:')}
                       console.log(pc.dim(`    Caption: "${captionText.substring(0, 50)}${captionText.length > 50 ? '...' : ''}" (${captionText.length} chars, ${lines} line${lines > 1 ? 's' : ''})`));
 
                       // Show font info
-                      const fontName = deviceConfig.captionFont || config.caption.font;
+                      const fontName = isV2
+                        ? configV2.caption.font
+                        : (deviceConfig as AppshotConfig['devices'][string]).captionFont || configV1.caption.font;
                       console.log(pc.dim(`    Font: ${fontName}`));
                     }
 
                     // Show output info
                     console.log(pc.dim(`    Output: ${outWidth}x${outHeight} → ${outputPath}`));
+                    if (isV2) {
+                      const hasCaption = typeof captionText === 'string' && captionText.trim().length > 0 && opts.caption !== false;
+                      const effectiveLayout = hasCaption ? configV2.layout : 'screenshot-only';
+                      console.log(pc.dim(`    Layout: ${effectiveLayout}`));
+                      if (!hasCaption && configV2.layout !== 'screenshot-only') {
+                        console.log(pc.dim('    Layout override: no caption → screenshot-only'));
+                      }
+                    }
 
                     totalProcessed++;
                   } else {
@@ -294,7 +345,7 @@ ${pc.bold('Language Detection:')}
                     let image: Buffer;
                     try {
                       // Configure background
-                      let backgroundConfig = config.background;
+                      let backgroundConfig = isV2 ? configV2.background : configV1.background;
 
                       // Override with command line options
                       if (opts.background) {
@@ -314,29 +365,59 @@ ${pc.bold('Language Detection:')}
                         backgroundConfig = undefined;
                       }
 
-                      image = await composeAppStoreScreenshot({
-                        screenshot: screenshotBuffer!,
-                        frame: frame,
-                        frameMetadata: frameMetadata ? {
-                          frameWidth: frameMetadata.frameWidth,
-                          frameHeight: frameMetadata.frameHeight,
-                          screenRect: frameMetadata.screenRect,
-                          maskPath: frameMetadata.maskPath,
-                          deviceType: frameMetadata.deviceType,
-                          displayName: frameMetadata.displayName,
-                          name: frameMetadata.name
-                        } : undefined,
-                        caption: opts.caption !== false ? captionText : undefined,
-                        captionConfig: config.caption,
-                        gradientConfig: opts.gradient === false ? undefined : config.gradient,
-                        backgroundConfig: backgroundConfig,
-                        deviceConfig: deviceConfig,
-                        outputWidth: outWidth,
-                        outputHeight: outHeight,
-                        verbose: opts.verbose
-                      });
+                      if (isV2) {
+                        image = await composeV2({
+                          screenshot: screenshotBuffer!,
+                          frame: frame,
+                          frameMetadata: frameMetadata ? {
+                            frameWidth: frameMetadata.frameWidth,
+                            frameHeight: frameMetadata.frameHeight,
+                            screenRect: frameMetadata.screenRect,
+                            maskPath: frameMetadata.maskPath,
+                            deviceType: frameMetadata.deviceType,
+                            displayName: frameMetadata.displayName,
+                            name: frameMetadata.name
+                          } : undefined,
+                          caption: opts.caption !== false ? captionText : undefined,
+                          captionConfig: configV2.caption,
+                          backgroundConfig: backgroundConfig,
+                          outputWidth: outWidth,
+                          outputHeight: outHeight,
+                          layout: configV2.layout,
+                          deviceType: device as 'iphone' | 'ipad' | 'mac' | 'watch',
+                          deviceInputPath: inputDir,
+                          verbose: opts.verbose
+                        });
+                      } else {
+                        image = await composeAppStoreScreenshot({
+                          screenshot: screenshotBuffer!,
+                          frame: frame,
+                          frameMetadata: frameMetadata ? {
+                            frameWidth: frameMetadata.frameWidth,
+                            frameHeight: frameMetadata.frameHeight,
+                            screenRect: frameMetadata.screenRect,
+                            maskPath: frameMetadata.maskPath,
+                            deviceType: frameMetadata.deviceType,
+                            displayName: frameMetadata.displayName,
+                            name: frameMetadata.name
+                          } : undefined,
+                          caption: opts.caption !== false ? captionText : undefined,
+                          captionConfig: configV1.caption,
+                          gradientConfig: opts.gradient === false ? undefined : configV1.gradient,
+                          backgroundConfig: backgroundConfig,
+                          deviceConfig: deviceConfig as AppshotConfig['devices'][string],
+                          outputWidth: outWidth,
+                          outputHeight: outHeight,
+                          verbose: opts.verbose
+                        });
+                      }
                     } catch (error) {
                       console.error(pc.red(`  ✗ ${path.basename(inputPath)}`), error instanceof Error ? error.message : String(error));
+                      totalErrors++;
+                      totalProcessed++;
+                      if (showSpinner) {
+                        spinner?.update(`Rendering ${totalProcessed}/${totalTasks} • ${device}/${lang} ${screenshot}`);
+                      }
                       return;
                     }
 
@@ -349,18 +430,35 @@ ${pc.bold('Language Detection:')}
                       .png()  // Ensure output is PNG
                       .toFile(outputPath);
 
-                    console.log(pc.green('  ✓'), path.basename(outputPath),
-                      pc.dim(`[${orientation}${frameUsed ? ', framed' : ''}${captionText ? ', captioned' : ''}]`));
+                    if (!showSpinner) {
+                      console.log(pc.green('  ✓'), path.basename(outputPath),
+                        pc.dim(`[${orientation}${frameUsed ? ', framed' : ''}${captionText ? ', captioned' : ''}]`));
+                    }
                     totalProcessed++;
+                    if (showSpinner) {
+                      spinner?.update(`Rendering ${totalProcessed}/${totalTasks} • ${device}/${lang} ${screenshot}`);
+                    }
                   }
                 } catch (error) {
                   console.log(pc.red('  ✗'), screenshot, pc.dim(error instanceof Error ? error.message : String(error)));
                   totalErrors++;
+                  totalProcessed++;
+                  if (showSpinner) {
+                    spinner?.update(`Rendering ${totalProcessed}/${totalTasks} • ${device}/${lang} ${screenshot}`);
+                  }
                 }
               });
 
               await Promise.all(promises);
             }
+          }
+        }
+
+        if (showSpinner) {
+          if (totalErrors > 0) {
+            spinner?.fail(`Rendered ${totalProcessed} image(s) with ${totalErrors} error(s)`);
+          } else {
+            spinner?.succeed(`Rendered ${totalProcessed} image(s)`);
           }
         }
 
@@ -374,10 +472,13 @@ ${pc.bold('Language Detection:')}
           if (totalErrors > 0) {
             console.log(pc.red(`✗ ${totalErrors} errors`));
           }
-          console.log(pc.dim(`Output directory: ${config.output}`));
+          console.log(pc.dim(`Output directory: ${outputRoot}`));
         }
 
       } catch (error) {
+        if (showSpinner) {
+          spinner?.fail('Build failed');
+        }
         console.error(pc.red('Error:'), error instanceof Error ? error.message : String(error));
         process.exit(1);
       }

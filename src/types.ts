@@ -138,3 +138,41 @@ export interface CaptionHistory {
   patterns: string[];
   lastUpdated: string;
 }
+
+export type LayoutModeV2 = 'header' | 'footer' | 'screenshot-only';
+
+export interface CaptionBackgroundV2 {
+  color?: string;
+  opacity?: number;
+}
+
+export interface CaptionConfigV2 {
+  font: string;
+  color: string;
+  background?: CaptionBackgroundV2;
+}
+
+export type DeviceInputV2 = string | { input: string; resolution?: string };
+
+export interface AppshotConfigV2 {
+  version: 2;
+  layout: LayoutModeV2;
+  caption: CaptionConfigV2;
+  background?: BackgroundConfig;
+  devices: Record<string, DeviceInputV2>;
+  output?: string;
+  frames?: string;
+}
+
+export interface DeviceStrategyV2 {
+  deviceType: 'iphone' | 'ipad' | 'mac' | 'watch';
+  captionRatio: number;
+  minCaptionPx: number;
+  edgePadding: number;
+  regionGap: number;
+  captionMaxLines: number;
+  captionLineHeight: number;
+  fontScale: number;
+  fontMin: number;
+  fontMax: number;
+}

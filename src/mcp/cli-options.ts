@@ -111,6 +111,21 @@ export interface QuickstartToolArgs {
   force?: boolean;
 }
 
+export interface WizardToolArgs {
+  devices?: string[];
+  layout?: 'header' | 'footer' | 'screenshot-only';
+  template?: string;
+  captionSource?: 'filenames' | 'manual';
+  languages?: string[];
+  model?: string;
+  enhance?: boolean;
+  noEnhance?: boolean;
+  noInteractive?: boolean;
+  dryRun?: boolean;
+  migrate?: boolean;
+  requireAi?: boolean;
+}
+
 function pushFlag(args: string[], flag: string, value?: string | number) {
   if (value === undefined || value === null) {
     return;
@@ -279,5 +294,22 @@ export function createQuickstartArgs(input: QuickstartToolArgs): string[] {
   pushFlag(args, '--caption', input.caption);
   pushBoolean(args, '--no-interactive', input.noInteractive);
   pushBoolean(args, '--force', input.force);
+  return args;
+}
+
+export function createWizardArgs(input: WizardToolArgs): string[] {
+  const args = ['wizard'];
+  pushFlag(args, '--devices', serializeList(input.devices));
+  pushFlag(args, '--layout', input.layout);
+  pushFlag(args, '--template', input.template);
+  pushFlag(args, '--caption-source', input.captionSource);
+  pushFlag(args, '--langs', serializeList(input.languages));
+  pushFlag(args, '--model', input.model);
+  pushBoolean(args, '--enhance', input.enhance);
+  pushBoolean(args, '--no-enhance', input.noEnhance);
+  pushBoolean(args, '--no-interactive', input.noInteractive);
+  pushBoolean(args, '--dry-run', input.dryRun);
+  pushBoolean(args, '--migrate', input.migrate);
+  pushBoolean(args, '--require-ai', input.requireAi);
   return args;
 }

@@ -7,7 +7,7 @@ import { createComposeBridge } from './compose-bridge.js';
 import { deviceManager } from './device-manager.js';
 import { screenshotRouter } from './screenshot-router.js';
 import { loadConfig } from '../core/files.js';
-import { AppshotConfig } from '../types.js';
+import type { AppshotConfig, AppshotConfigV2 } from '../types.js';
 import { UnifiedDevice } from '../types/device.js';
 
 export interface WatchOptions {
@@ -31,7 +31,7 @@ export class WatchService {
   private queue: ProcessingQueue;
   private watchers: Map<string, fs.FSWatcher> = new Map();
   private stats: WatchStats;
-  private config?: AppshotConfig;
+  private config?: AppshotConfig | AppshotConfigV2;
   private devices?: UnifiedDevice[];
   private debounceTimers: Map<string, NodeJS.Timeout> = new Map();
   private running = false;

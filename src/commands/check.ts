@@ -4,6 +4,8 @@ import path from 'path';
 import pc from 'picocolors';
 import { loadConfig, fileExists } from '../core/files.js';
 import { validateBackgroundDimensions } from '../core/background.js';
+import { isV2Config } from '../utils/config-version.js';
+import type { AppshotConfigV2 } from '../types.js';
 
 export default function checkCmd() {
   return new Command('check')
@@ -20,134 +22,206 @@ export default function checkCmd() {
         console.log(pc.cyan('Configuration:'));
         try {
           const config = await loadConfig();
-          console.log(pc.green('  ✓'), 'appshot.json found and valid');
+          console.log(pc.green('  ✓'), `appshot.json found and valid${isV2Config(config) ? ' (v2)' : ''}`);
 
-          // Check output directory
-          if (!await fileExists(config.output)) {
-            if (opts.fix) {
-              await fs.mkdir(config.output, { recursive: true });
-              console.log(pc.green('  ✓'), `Created output directory: ${config.output}`);
-            } else {
-              console.log(pc.yellow('  ⚠'), `Output directory does not exist: ${config.output}`);
-              warnings++;
-            }
-          } else {
-            console.log(pc.green('  ✓'), `Output directory exists: ${config.output}`);
-          }
+          if (isV2Config(config)) {
+            const v2Config = config as AppshotConfigV2;
 
-          // Check device configurations
-          console.log('\n' + pc.cyan('Devices:'));
-          for (const [device, deviceConfig] of Object.entries(config.devices)) {
-            console.log(`  ${device}:`);
-
-            // Check input directory
-            const inputPath = path.resolve(deviceConfig.input);
-            if (!await fileExists(inputPath)) {
-              if (opts.fix) {
-                await fs.mkdir(inputPath, { recursive: true });
-                console.log(pc.green('    ✓'), `Created: ${deviceConfig.input}`);
-              } else {
-                console.log(pc.red('    ✗'), `Input directory not found: ${deviceConfig.input}`);
-                errors++;
-              }
-            } else {
-              // Count screenshots
-              const files = await fs.readdir(inputPath);
-              const screenshots = files.filter(f => f.match(/\.(png|jpg|jpeg)$/i));
-              console.log(pc.green('    ✓'), `${screenshots.length} screenshots found`);
-
-              // Check captions file
-              const captionsPath = path.join(inputPath, 'captions.json');
-              if (!await fileExists(captionsPath)) {
+            if (v2Config.output) {
+              if (!await fileExists(v2Config.output)) {
                 if (opts.fix) {
-                  await fs.writeFile(captionsPath, '{}', 'utf8');
-                  console.log(pc.green('    ✓'), 'Created captions.json');
+                  await fs.mkdir(v2Config.output, { recursive: true });
+                  console.log(pc.green('  ✓'), `Created output directory: ${v2Config.output}`);
                 } else {
-                  console.log(pc.yellow('    ⚠'), 'No captions.json file');
+                  console.log(pc.yellow('  ⚠'), `Output directory does not exist: ${v2Config.output}`);
                   warnings++;
                 }
               } else {
-                console.log(pc.green('    ✓'), 'captions.json exists');
+                console.log(pc.green('  ✓'), `Output directory exists: ${v2Config.output}`);
               }
             }
-          }
 
-          // Check frames directory
-          console.log('\n' + pc.cyan('Frames:'));
-          const framesPath = path.resolve(config.frames);
-          if (!await fileExists(framesPath)) {
-            if (opts.fix) {
-              await fs.mkdir(framesPath, { recursive: true });
-              console.log(pc.green('  ✓'), `Created frames directory: ${config.frames}`);
-            } else {
-              console.log(pc.yellow('  ⚠'), `Frames directory not found: ${config.frames}`);
-              warnings++;
-            }
-          } else {
-            const frames = await fs.readdir(framesPath);
-            const frameFiles = frames.filter(f => f.match(/\.(png|jpg|jpeg)$/i));
-            console.log(pc.green('  ✓'), `${frameFiles.length} frame files found`);
-          }
+            console.log('\n' + pc.cyan('Devices:'));
+            for (const [device, deviceConfig] of Object.entries(v2Config.devices)) {
+              const inputDir = typeof deviceConfig === 'string' ? deviceConfig : deviceConfig.input;
+              console.log(`  ${device}:`);
 
-          // Check backgrounds
-          console.log('\n' + pc.cyan('Backgrounds:'));
-          if (config.background?.image) {
-            // Global background configured
-            if (await fileExists(config.background.image)) {
-              console.log(pc.green('  ✓'), `Global background found: ${config.background.image}`);
-            } else {
-              console.log(pc.red('  ✗'), `Global background not found: ${config.background.image}`);
-              errors++;
-            }
-          }
-
-          // Check device-specific backgrounds
-          for (const [device, deviceConfig] of Object.entries(config.devices)) {
-            let backgroundFound = false;
-            let backgroundPath: string | null = null;
-
-            // Check explicit device background config
-            if (deviceConfig.background?.image) {
-              backgroundPath = deviceConfig.background.image;
-              if (await fileExists(backgroundPath)) {
-                backgroundFound = true;
+              const inputPath = path.resolve(inputDir);
+              if (!await fileExists(inputPath)) {
+                if (opts.fix) {
+                  await fs.mkdir(inputPath, { recursive: true });
+                  console.log(pc.green('    ✓'), `Created: ${inputDir}`);
+                } else {
+                  console.log(pc.red('    ✗'), `Input directory not found: ${inputDir}`);
+                  errors++;
+                }
               } else {
-                console.log(pc.red(`  ✗ ${device}:`), `Configured background not found: ${backgroundPath}`);
-                errors++;
-                continue;
-              }
-            }
-
-            // Check for auto-detected background.png
-            if (!backgroundFound) {
-              const autoBackgrounds = [
-                path.join(deviceConfig.input, 'background.png'),
-                path.join(deviceConfig.input, 'background.jpg'),
-                path.join(deviceConfig.input, 'background.jpeg')
-              ];
-
-              for (const bgPath of autoBackgrounds) {
-                if (await fileExists(bgPath)) {
-                  backgroundPath = bgPath;
-                  backgroundFound = true;
-                  break;
+                const files = await fs.readdir(inputPath);
+                const screenshots = files.filter(f => f.match(/\.(png|jpg|jpeg)$/i));
+                if (screenshots.length > 0) {
+                  console.log(pc.green('    ✓'), `${screenshots.length} screenshots found`);
+                } else {
+                  console.log(pc.yellow('    ⚠'), 'No screenshots found');
+                  warnings++;
                 }
               }
             }
 
-            // Validate background dimensions if found
-            if (backgroundFound && backgroundPath) {
-              const [width, height] = deviceConfig.resolution.split('x').map(Number);
-              const validation = await validateBackgroundDimensions(backgroundPath, width, height);
-
-              if (validation.valid) {
-                console.log(pc.green(`  ✓ ${device}:`), `Background OK (${validation.dimensions.source.width}x${validation.dimensions.source.height})`);
+            if (v2Config.frames) {
+              console.log('\n' + pc.cyan('Frames:'));
+              const framesPath = path.resolve(v2Config.frames);
+              if (!await fileExists(framesPath)) {
+                if (opts.fix) {
+                  await fs.mkdir(framesPath, { recursive: true });
+                  console.log(pc.green('  ✓'), `Created frames directory: ${v2Config.frames}`);
+                } else {
+                  console.log(pc.yellow('  ⚠'), `Frames directory not found: ${v2Config.frames}`);
+                  warnings++;
+                }
               } else {
-                console.log(pc.yellow(`  ⚠ ${device}:`), 'Background dimension mismatch');
-                validation.warnings.forEach(warning => {
-                  console.log(pc.dim(`      ${warning}`));
-                });
+                const frames = await fs.readdir(framesPath);
+                const frameFiles = frames.filter(f => f.match(/\.(png|jpg|jpeg)$/i));
+                console.log(pc.green('  ✓'), `${frameFiles.length} frame files found`);
+              }
+            }
+
+            console.log('\n' + pc.cyan('Backgrounds:'));
+            if (v2Config.background?.image) {
+              if (await fileExists(v2Config.background.image)) {
+                console.log(pc.green('  ✓'), `Global background found: ${v2Config.background.image}`);
+              } else {
+                console.log(pc.red('  ✗'), `Global background not found: ${v2Config.background.image}`);
+                errors++;
+              }
+            }
+          } else {
+            // Check output directory
+            if (!await fileExists(config.output)) {
+              if (opts.fix) {
+                await fs.mkdir(config.output, { recursive: true });
+                console.log(pc.green('  ✓'), `Created output directory: ${config.output}`);
+              } else {
+                console.log(pc.yellow('  ⚠'), `Output directory does not exist: ${config.output}`);
                 warnings++;
+              }
+            } else {
+              console.log(pc.green('  ✓'), `Output directory exists: ${config.output}`);
+            }
+
+            // Check device configurations
+            console.log('\n' + pc.cyan('Devices:'));
+            for (const [device, deviceConfig] of Object.entries(config.devices)) {
+              console.log(`  ${device}:`);
+
+              // Check input directory
+              const inputPath = path.resolve(deviceConfig.input);
+              if (!await fileExists(inputPath)) {
+                if (opts.fix) {
+                  await fs.mkdir(inputPath, { recursive: true });
+                  console.log(pc.green('    ✓'), `Created: ${deviceConfig.input}`);
+                } else {
+                  console.log(pc.red('    ✗'), `Input directory not found: ${deviceConfig.input}`);
+                  errors++;
+                }
+              } else {
+                // Count screenshots
+                const files = await fs.readdir(inputPath);
+                const screenshots = files.filter(f => f.match(/\.(png|jpg|jpeg)$/i));
+                console.log(pc.green('    ✓'), `${screenshots.length} screenshots found`);
+
+                // Check captions file
+                const captionsPath = path.join(inputPath, 'captions.json');
+                if (!await fileExists(captionsPath)) {
+                  if (opts.fix) {
+                    await fs.writeFile(captionsPath, '{}', 'utf8');
+                    console.log(pc.green('    ✓'), 'Created captions.json');
+                  } else {
+                    console.log(pc.yellow('    ⚠'), 'No captions.json file');
+                    warnings++;
+                  }
+                } else {
+                  console.log(pc.green('    ✓'), 'captions.json exists');
+                }
+              }
+            }
+
+            // Check frames directory
+            console.log('\n' + pc.cyan('Frames:'));
+            const framesPath = path.resolve(config.frames);
+            if (!await fileExists(framesPath)) {
+              if (opts.fix) {
+                await fs.mkdir(framesPath, { recursive: true });
+                console.log(pc.green('  ✓'), `Created frames directory: ${config.frames}`);
+              } else {
+                console.log(pc.yellow('  ⚠'), `Frames directory not found: ${config.frames}`);
+                warnings++;
+              }
+            } else {
+              const frames = await fs.readdir(framesPath);
+              const frameFiles = frames.filter(f => f.match(/\.(png|jpg|jpeg)$/i));
+              console.log(pc.green('  ✓'), `${frameFiles.length} frame files found`);
+            }
+
+            // Check backgrounds
+            console.log('\n' + pc.cyan('Backgrounds:'));
+            if (config.background?.image) {
+              // Global background configured
+              if (await fileExists(config.background.image)) {
+                console.log(pc.green('  ✓'), `Global background found: ${config.background.image}`);
+              } else {
+                console.log(pc.red('  ✗'), `Global background not found: ${config.background.image}`);
+                errors++;
+              }
+            }
+
+            // Check device-specific backgrounds
+            for (const [device, deviceConfig] of Object.entries(config.devices)) {
+              let backgroundFound = false;
+              let backgroundPath: string | null = null;
+
+              // Check explicit device background config
+              if (deviceConfig.background?.image) {
+                backgroundPath = deviceConfig.background.image;
+                if (await fileExists(backgroundPath)) {
+                  backgroundFound = true;
+                } else {
+                  console.log(pc.red(`  ✗ ${device}:`), `Configured background not found: ${backgroundPath}`);
+                  errors++;
+                  continue;
+                }
+              }
+
+              // Check for auto-detected background.png
+              if (!backgroundFound) {
+                const autoBackgrounds = [
+                  path.join(deviceConfig.input, 'background.png'),
+                  path.join(deviceConfig.input, 'background.jpg'),
+                  path.join(deviceConfig.input, 'background.jpeg')
+                ];
+
+                for (const bgPath of autoBackgrounds) {
+                  if (await fileExists(bgPath)) {
+                    backgroundPath = bgPath;
+                    backgroundFound = true;
+                    break;
+                  }
+                }
+              }
+
+              // Validate background dimensions if found
+              if (backgroundFound && backgroundPath) {
+                const [width, height] = deviceConfig.resolution.split('x').map(Number);
+                const validation = await validateBackgroundDimensions(backgroundPath, width, height);
+
+                if (validation.valid) {
+                  console.log(pc.green(`  ✓ ${device}:`), `Background OK (${validation.dimensions.source.width}x${validation.dimensions.source.height})`);
+                } else {
+                  console.log(pc.yellow(`  ⚠ ${device}:`), 'Background dimension mismatch');
+                  validation.warnings.forEach(warning => {
+                    console.log(pc.dim(`      ${warning}`));
+                  });
+                  warnings++;
+                }
               }
             }
           }

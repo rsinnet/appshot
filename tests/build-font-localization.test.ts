@@ -178,9 +178,8 @@ describe('Build Command Font Localization', () => {
     expect(enExists).toBe(true);
     expect(frExists).toBe(true);
 
-    // Verify config has the correct fonts
+    // Verify config has the correct font (v2 uses global caption font only)
     const finalConfig = JSON.parse(await fs.readFile(path.join(testDir, '.appshot/config.json'), 'utf8'));
-    expect(finalConfig.caption.font).toBe('Georgia');
-    expect(finalConfig.devices.iphone.captionFont).toBe('Arial');
+    expect(finalConfig.caption.font).toBe('Arial');
   });
 });

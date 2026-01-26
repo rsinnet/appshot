@@ -14,6 +14,39 @@ import { MODEL_CONFIGS } from '../types/ai.js';
 // Cache for translations to avoid duplicate API calls
 const translationCache = new Map<string, TranslationResult>();
 
+const SUPPORTED_LANGUAGES: Record<string, string> = {
+  'en': 'English',
+  'es': 'Spanish',
+  'fr': 'French',
+  'de': 'German',
+  'it': 'Italian',
+  'pt': 'Portuguese',
+  'pt-BR': 'Brazilian Portuguese',
+  'ru': 'Russian',
+  'ja': 'Japanese',
+  'ko': 'Korean',
+  'zh-CN': 'Simplified Chinese',
+  'zh-TW': 'Traditional Chinese',
+  'ar': 'Arabic',
+  'hi': 'Hindi',
+  'nl': 'Dutch',
+  'sv': 'Swedish',
+  'no': 'Norwegian',
+  'da': 'Danish',
+  'fi': 'Finnish',
+  'pl': 'Polish',
+  'tr': 'Turkish',
+  'th': 'Thai',
+  'vi': 'Vietnamese',
+  'id': 'Indonesian',
+  'ms': 'Malay',
+  'he': 'Hebrew'
+};
+
+export interface TranslationBatchResult {
+  [filename: string]: TranslationResult;
+}
+
 export class TranslationService {
   private client: OpenAI | null = null;
   private config: AIConfig;
@@ -32,7 +65,7 @@ export class TranslationService {
     const apiKey = process.env.OPENAI_API_KEY;
 
     if (apiKey) {
-      this.client = new OpenAI({ apiKey });
+      this.client = new OpenAI({ apiKey, timeout: 180000 });
     }
   }
 
@@ -49,6 +82,10 @@ export class TranslationService {
     } catch {
       // Config file doesn't exist, use defaults
     }
+  }
+
+  public getSupportedLanguages(): Array<{ code: string; name: string }> {
+    return Object.entries(SUPPORTED_LANGUAGES).map(([code, name]) => ({ code, name }));
   }
 
   public async saveConfig(config: Partial<AIConfig>): Promise<void> {
@@ -85,36 +122,8 @@ export class TranslationService {
     }
 
     // Build language map for the prompt
-    const languageNames: Record<string, string> = {
-      'es': 'Spanish',
-      'fr': 'French',
-      'de': 'German',
-      'it': 'Italian',
-      'pt': 'Portuguese',
-      'pt-BR': 'Brazilian Portuguese',
-      'ru': 'Russian',
-      'ja': 'Japanese',
-      'ko': 'Korean',
-      'zh-CN': 'Simplified Chinese',
-      'zh-TW': 'Traditional Chinese',
-      'ar': 'Arabic',
-      'hi': 'Hindi',
-      'nl': 'Dutch',
-      'sv': 'Swedish',
-      'no': 'Norwegian',
-      'da': 'Danish',
-      'fi': 'Finnish',
-      'pl': 'Polish',
-      'tr': 'Turkish',
-      'th': 'Thai',
-      'vi': 'Vietnamese',
-      'id': 'Indonesian',
-      'ms': 'Malay',
-      'he': 'Hebrew'
-    };
-
     const targetLangs = options.targetLanguages
-      .map(code => `${code}: ${languageNames[code] || code}`)
+      .map(code => `${code}: ${SUPPORTED_LANGUAGES[code] || code}`)
       .join(', ');
 
     const systemPrompt = options.systemPrompt || this.config.systemPrompt ||
@@ -189,6 +198,85 @@ Return ONLY a JSON object with language codes as keys and translations as values
     }
   }
 
+  public async translateCaptionsBatch(
+    captions: Record<string, string>,
+    targetLanguages: string[],
+    model?: OpenAIModel
+  ): Promise<TranslationBatchResult> {
+    if (!this.client) {
+      throw new Error('OpenAI API key not found. Set OPENAI_API_KEY environment variable.');
+    }
+
+    const selectedModel = model || this.config.defaultModel;
+    const modelConfig = MODEL_CONFIGS[selectedModel];
+    if (!modelConfig) {
+      throw new Error(`Unknown model: ${selectedModel}`);
+    }
+
+    const targetLangs = targetLanguages
+      .map(code => `${code}: ${SUPPORTED_LANGUAGES[code] || code}`)
+      .join(', ');
+
+    const systemPrompt = this.config.systemPrompt ||
+      `You are a professional app localization expert. Translate the given app screenshot captions into the requested languages.
+       The captions are marketing text for mobile app screenshots.
+       Keep translations concise, impactful, and culturally appropriate.
+       Maintain the marketing tone and appeal of the original text.
+       Return only JSON.`;
+
+    const userPrompt = `Translate these captions into the following languages: ${targetLangs}
+
+Return ONLY a JSON object with the same keys as the input. Each value should be an object
+of language codes and translations. Example:
+{
+  "home.png": { "es": "...", "fr": "..." },
+  "features.png": { "es": "...", "fr": "..." }
+}
+
+Input JSON:
+${JSON.stringify(captions)}`;
+
+    const params: any = {
+      model: modelConfig.model,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt }
+      ],
+      temperature: modelConfig.temperature,
+      response_format: { type: 'json_object' }
+    };
+
+    if (modelConfig.maxTokensParam === 'max_completion_tokens') {
+      params.max_completion_tokens = Math.min(modelConfig.maxTokens, 4000);
+    } else {
+      params.max_tokens = Math.min(modelConfig.maxTokens, 4000);
+    }
+
+    const response = await this.client.chat.completions.create(params);
+
+    const content = response.choices[0]?.message?.content;
+    if (!content) {
+      throw new Error('No response from OpenAI');
+    }
+
+    const parsed = parseJsonMap(content);
+    const result: TranslationBatchResult = {};
+
+    for (const [file, original] of Object.entries(captions)) {
+      const entry = parsed[file] as TranslationResult | undefined;
+      if (entry && typeof entry === 'object') {
+        result[file] = entry;
+      } else {
+        result[file] = {};
+        for (const lang of targetLanguages) {
+          result[file][lang] = original;
+        }
+      }
+    }
+
+    return result;
+  }
+
   public async translateBatch(
     captions: string[],
     targetLanguages: string[],
@@ -235,6 +323,24 @@ Return ONLY a JSON object with language codes as keys and translations as values
 
   public clearCache(): void {
     translationCache.clear();
+  }
+}
+
+function parseJsonMap(text: string): Record<string, any> {
+  const trimmed = text.trim();
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    const start = trimmed.indexOf('{');
+    const end = trimmed.lastIndexOf('}');
+    if (start >= 0 && end > start) {
+      try {
+        return JSON.parse(trimmed.slice(start, end + 1));
+      } catch {
+        return {};
+      }
+    }
+    return {};
   }
 }
 

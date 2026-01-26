@@ -2,7 +2,7 @@ import { Command } from 'commander';
 import { promises as fs } from 'fs';
 import path from 'path';
 import pc from 'picocolors';
-import type { AppshotConfig } from '../types.js';
+import type { AppshotConfigV2 } from '../types.js';
 
 export default function initCmd() {
   const cmd = new Command('init')
@@ -24,9 +24,8 @@ ${pc.bold('Examples:')}
 ${pc.bold('Next Steps:')}
   1. Add screenshots to ${pc.cyan('screenshots/[device]/')} folders
   2. Run ${pc.cyan('appshot caption --device iphone')} to add captions
-  3. Run ${pc.cyan('appshot fonts --select')} to choose a font
-  4. Run ${pc.cyan('appshot gradients select')} to pick a gradient
-  5. Run ${pc.cyan('appshot build')} to generate final screenshots`)
+  3. Run ${pc.cyan('appshot style')} to pick layout + background
+  4. Run ${pc.cyan('appshot build')} to generate final screenshots`)
     .action(async (opts) => {
       try {
         const root = process.cwd();
@@ -34,25 +33,27 @@ ${pc.bold('Next Steps:')}
         const configPath = path.join(appshotDir, 'config.json');
         const devices = ['iphone', 'ipad', 'mac', 'watch'];
 
-        const scaffold: AppshotConfig = {
+        const scaffold: AppshotConfigV2 = {
+          version: 2,
           output: './final',
           frames: './frames',
-          gradient: {
-            colors: ['#FF5733', '#FFC300'],
-            direction: 'top-bottom'
+          layout: 'header',
+          background: {
+            mode: 'gradient',
+            gradient: {
+              colors: ['#FF5733', '#FFC300'],
+              direction: 'top-bottom'
+            }
           },
           caption: {
-            font: 'SF Pro',
-            fontsize: 64,
-            color: '#FFFFFF',
-            align: 'center',
-            paddingTop: 100
+            font: 'SF Pro Display Bold',
+            color: '#FFFFFF'
           },
           devices: {
-            iphone: { input: './screenshots/iphone', resolution: '1290x2796', autoFrame: true },
-            ipad:   { input: './screenshots/ipad',   resolution: '2048x2732', autoFrame: true },
-            mac:    { input: './screenshots/mac',    resolution: '2880x1800', autoFrame: true },
-            watch:  { input: './screenshots/watch',  resolution: '410x502', autoFrame: true }
+            iphone: { input: './screenshots/iphone', resolution: '1290x2796' },
+            ipad: { input: './screenshots/ipad', resolution: '2048x2732' },
+            mac: { input: './screenshots/mac', resolution: '2880x1800' },
+            watch: { input: './screenshots/watch', resolution: '410x502' }
           }
         };
 
@@ -100,7 +101,8 @@ ${pc.bold('Next Steps:')}
         console.log(pc.dim('Next steps:'));
         console.log(pc.dim('  1. Add screenshots to screenshots/[device]/ folders'));
         console.log(pc.dim('  2. Run'), pc.cyan('appshot caption --device iphone'), pc.dim('to add captions'));
-        console.log(pc.dim('  3. Run'), pc.cyan('appshot build'), pc.dim('to generate final screenshots'));
+        console.log(pc.dim('  3. Run'), pc.cyan('appshot style'), pc.dim('to select a layout'));
+        console.log(pc.dim('  4. Run'), pc.cyan('appshot build'), pc.dim('to generate final screenshots'));
       } catch (error) {
         console.error(pc.red('Error:'), error instanceof Error ? error.message : String(error));
         process.exit(1);
