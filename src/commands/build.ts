@@ -366,6 +366,7 @@ ${pc.bold('Language Detection:')}
                       }
 
                       if (isV2) {
+                        const v2YOffset = typeof deviceEntry === 'object' ? deviceEntry.frameYOffset : undefined;
                         image = await composeV2({
                           screenshot: screenshotBuffer!,
                           frame: frame,
@@ -386,6 +387,7 @@ ${pc.bold('Language Detection:')}
                           layout: configV2.layout,
                           deviceType: device as 'iphone' | 'ipad' | 'mac' | 'watch' | 'android',
                           deviceInputPath: inputDir,
+                          frameYOffset: v2YOffset,
                           verbose: opts.verbose
                         });
                       } else {

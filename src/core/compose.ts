@@ -1333,6 +1333,7 @@ export interface ComposeV2Options {
   layout: LayoutModeV2;
   deviceType: DeviceStrategyV2['deviceType'];
   deviceInputPath?: string;
+  frameYOffset?: number;
   verbose?: boolean;
   onDebug?: (info: LayoutV2DebugInfo) => void;
 }
@@ -1350,6 +1351,7 @@ export async function composeV2(options: ComposeV2Options): Promise<Buffer> {
     layout,
     deviceType,
     deviceInputPath,
+    frameYOffset = 0,
     verbose = false,
     onDebug
   } = options;
@@ -1371,6 +1373,9 @@ export async function composeV2(options: ComposeV2Options): Promise<Buffer> {
       console.log(pc.dim(`      Caption: ${regions.caption.width}x${regions.caption.height} @ (${regions.caption.x}, ${regions.caption.y})`));
     }
     console.log(pc.dim(`      Device: ${regions.device.width}x${regions.device.height} @ (${regions.device.x}, ${regions.device.y})`));
+    if (frameYOffset !== 0) {
+      console.log(pc.dim(`      Frame Y offset: ${frameYOffset}px`));
+    }
   }
 
   let backgroundBuffer: Buffer;
@@ -1409,10 +1414,11 @@ export async function composeV2(options: ComposeV2Options): Promise<Buffer> {
     const resizedFrame = await sharp(framedBuffer)
       .resize(deviceFit.width, deviceFit.height, { fit: 'fill' })
       .toBuffer();
+    const deviceTopV2 = deviceFit.y + frameYOffset;
     composites.push({
       input: resizedFrame,
       left: deviceFit.x,
-      top: deviceFit.y
+      top: deviceTopV2
     });
   } else {
     const metadata = await sharp(screenshot).metadata();
@@ -1422,10 +1428,11 @@ export async function composeV2(options: ComposeV2Options): Promise<Buffer> {
     const resizedScreenshot = await sharp(screenshot)
       .resize(deviceFit.width, deviceFit.height, { fit: 'fill' })
       .toBuffer();
+    const deviceTopV2 = deviceFit.y + frameYOffset;
     composites.push({
       input: resizedScreenshot,
       left: deviceFit.x,
-      top: deviceFit.y
+      top: deviceTopV2
     });
   }
 

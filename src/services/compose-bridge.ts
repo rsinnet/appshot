@@ -117,6 +117,8 @@ export class ComposeBridge {
           }
 
           const v2Config = this.config as AppshotConfigV2;
+          const v2DeviceEntry = v2Config.devices[device.category];
+          const v2YOffset = typeof v2DeviceEntry === 'object' ? v2DeviceEntry.frameYOffset : undefined;
           processedBuffer = await composeV2({
             screenshot: screenshotBuffer,
             frame: frameKey ? await this.loadFrame(frameKey) : null,
@@ -128,7 +130,8 @@ export class ComposeBridge {
             outputHeight,
             layout: v2Config.layout,
             deviceType: device.category as 'iphone' | 'ipad' | 'mac' | 'watch' | 'android',
-            deviceInputPath
+            deviceInputPath,
+            frameYOffset: v2YOffset
           });
         } else {
           // Determine output dimensions based on device or use defaults

@@ -153,7 +153,7 @@ export interface CaptionConfigV2 {
   background?: CaptionBackgroundV2;
 }
 
-export type DeviceInputV2 = string | { input: string; resolution?: string };
+export type DeviceInputV2 = string | { input: string; resolution?: string; frameYOffset?: number };
 
 export interface AppshotConfigV2 {
   version: 2;
