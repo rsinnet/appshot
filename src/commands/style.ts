@@ -73,6 +73,7 @@ ${pc.bold('Output:')}
         if (opts.reset) {
           delete currentDevice.framePosition;
           delete currentDevice.frameScale;
+          delete currentDevice.frameYOffset;
           delete currentDevice.captionSize;
           delete currentDevice.captionPosition;
           await saveConfig(v1Config);
@@ -85,6 +86,7 @@ ${pc.bold('Output:')}
         console.log(`  Auto frame selection: ${currentDevice.autoFrame !== false ? 'Enabled' : 'Disabled'}`);
         console.log(`  Frame position: ${formatFramePosition(currentDevice.framePosition)}`);
         console.log(`  Frame scale: ${currentDevice.frameScale ? `${currentDevice.frameScale * 100}%` : 'Auto'}`);
+        console.log(`  Frame Y offset: ${currentDevice.frameYOffset ? `${currentDevice.frameYOffset}px` : 'None'}`);
         console.log(`  Partial frame: ${currentDevice.partialFrame ? `Yes (${currentDevice.frameOffset || 25}% cut)` : 'No'}`);
         console.log(`  Caption font: ${v1Config.caption.font}`);
         console.log(`  Caption size: ${currentDevice.captionSize || 'Default'}`);
@@ -226,6 +228,16 @@ ${pc.bold('Output:')}
           }]);
           frameScale = customScaleAnswer.scale / 100;
         }
+
+        // Frame Y offset (shift device down/up by pixels)
+        const yOffsetAnswer = await inquirer.prompt([{
+          type: 'number',
+          name: 'frameYOffset',
+          message: 'Shift device vertically by pixels (positive=down, negative=up, 0=none):',
+          default: currentDevice.frameYOffset || 0,
+          validate: (value) => (value !== undefined && value >= -2000 && value <= 2000) || 'Please enter a value between -2000 and 2000'
+        }]);
+        const frameYOffset = yOffsetAnswer.frameYOffset;
 
         // Caption customization
         const captionAnswer = await inquirer.prompt([{
@@ -690,6 +702,12 @@ ${pc.bold('Output:')}
           delete currentDevice.frameScale;
         }
 
+        if (frameYOffset && frameYOffset !== 0) {
+          currentDevice.frameYOffset = frameYOffset;
+        } else {
+          delete currentDevice.frameYOffset;
+        }
+
         if (captionSize && captionSize !== v1Config.caption.fontsize) {
           currentDevice.captionSize = captionSize;
         } else {
@@ -721,7 +739,7 @@ ${pc.bold('Output:')}
         console.log(pc.dim('Run "appshot build" to generate screenshots with new styling'));
 
         // Show what changed
-        if (!autoFrameAnswer.autoFrame || framePosition !== 'center' || frameScale || captionSize || captionFont || captionPosition || currentDevice.partialFrame) {
+        if (!autoFrameAnswer.autoFrame || framePosition !== 'center' || frameScale || frameYOffset || captionSize || captionFont || captionPosition || currentDevice.partialFrame) {
           console.log('\n' + pc.cyan('Applied settings:'));
           if (!autoFrameAnswer.autoFrame) {
             console.log(`  • Auto frame: Disabled (using ${preferredFrame})`);
@@ -731,6 +749,9 @@ ${pc.bold('Output:')}
           }
           if (frameScale) {
             console.log(`  • Frame scale: ${frameScale * 100}%`);
+          }
+          if (frameYOffset) {
+            console.log(`  • Frame Y offset: ${frameYOffset}px`);
           }
           if (currentDevice.partialFrame) {
             console.log(`  • Partial frame: Yes (${currentDevice.frameOffset}% cut)`);

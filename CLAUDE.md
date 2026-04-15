@@ -190,6 +190,7 @@ Note: Device frames are bundled with appshot - users don't need a local frames d
       "frameOffset": 25,
       "framePosition": "center",
       "frameScale": 0.9,
+      "frameYOffset": 0,
       "captionPosition": "above",
       "captionBackground": {},
       "captionBorder": {}
@@ -356,6 +357,12 @@ The `framePosition` value (0-100) is interpreted differently based on `captionPo
   - `framePosition: 0` means pixel 0 (absolute top)
   - Caption renders at bottom, independent of device position
 
+- **`frameYOffset`** (pixels, default: 0):
+  - Applied AFTER all positioning and clamping calculations
+  - Shifts the device by raw pixels (positive = down, negative = up)
+  - Allows the device to extend partially off-canvas (sharp clips at edges)
+  - Example: `"frameYOffset": 200` pushes the phone 200px below its calculated position
+
 **Critical Bug Fix (Line 208)**:
 ```javascript
 // WRONG: const framePosition = deviceConfig.framePosition || 'center';
@@ -382,6 +389,7 @@ const framePosition = deviceConfig.framePosition !== undefined ? deviceConfig.fr
 6. **framePosition: 0 is falsy** - Must use `!== undefined` check, not `||`
 7. **framePosition is relative** - Same value produces different results with above/below vs overlay captions
 8. **marginBottom affects positioning** - Even with overlay mode, marginBottom reduces available space
+9. **frameYOffset is applied after all positioning** - It shifts the device by raw pixels, bypassing clamping. Positive values push down (device goes off bottom edge), negative values push up
 
 ## Agent Integration
 

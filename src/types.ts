@@ -45,6 +45,7 @@ export interface CaptionConfig {
 export interface DeviceStyleConfig {
   framePosition?: 'top' | 'center' | 'bottom' | number;  // Vertical position (0-100)
   frameScale?: number;        // Scale multiplier (0.5-2.0)
+  frameYOffset?: number;      // Pixel offset to shift device down (positive) or up (negative)
   captionSize?: number;       // Device-specific caption size override
   captionPosition?: 'above' | 'below' | 'overlay';  // Device-specific position
   captionBox?: CaptionBoxConfig;  // Device-specific caption box settings

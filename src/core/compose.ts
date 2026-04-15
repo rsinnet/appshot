@@ -289,6 +289,7 @@ export async function composeAppStoreScreenshot(options: ComposeOptions): Promis
   const frameOffset = deviceConfig.frameOffset !== undefined ? deviceConfig.frameOffset : 25; // Default 25% cut off
   const framePosition = deviceConfig.framePosition !== undefined ? deviceConfig.framePosition : 'center';
   const deviceFrameScale = deviceConfig.frameScale;
+  const frameYOffset = deviceConfig.frameYOffset || 0;
 
   const {
     captionTopInsetAbove,
@@ -305,6 +306,9 @@ export async function composeAppStoreScreenshot(options: ComposeOptions): Promis
     console.log(pc.dim(`      Caption position: ${captionPosition}`));
     console.log(pc.dim(`      Frame position: ${String(framePosition)}`));
     console.log(pc.dim(`      Frame scale: ${deviceFrameScale ?? '(auto)'}`));
+    if (frameYOffset !== 0) {
+      console.log(pc.dim(`      Frame Y offset: ${frameYOffset}px`));
+    }
     const insetTop = captionPosition === 'above' ? captionTopInsetAbove : deviceTopInsetBelow;
     console.log(pc.dim(`      Insets: top=${insetTop}px, bottom=${bottomInset}px, side=${sideMarginDbg}px`));
     if (captionPosition !== 'overlay') {
@@ -943,10 +947,18 @@ export async function composeAppStoreScreenshot(options: ComposeOptions): Promis
       const bottomAdjustmentOverlay = partialFrame ? croppedPixels : 0;
       deviceTop = Math.floor(Math.max(0, Math.min(deviceTop, canvasHeight - marginBottom - targetDeviceHeight + bottomAdjustmentOverlay)));
     }
+    // Apply pixel Y offset (allows shifting device partially off-canvas)
+    if (frameYOffset !== 0) {
+      deviceTop += frameYOffset;
+    }
+
     const deviceLeft = Math.floor((canvasWidth - targetDeviceWidth) / 2);
 
     if (verbose) {
       console.log(pc.dim(`      Position: ${framePosition} → top: ${deviceTop}px, left: ${deviceLeft}px`));
+      if (frameYOffset !== 0) {
+        console.log(pc.dim(`      Y offset applied: ${frameYOffset}px`));
+      }
     }
 
     // Add the complete device to composites
