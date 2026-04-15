@@ -3,8 +3,9 @@ import { iphoneStrategyV2 } from './iphone.js';
 import { ipadStrategyV2 } from './ipad.js';
 import { macStrategyV2 } from './mac.js';
 import { watchStrategyV2 } from './watch.js';
+import { androidStrategyV2 } from './android.js';
 
-export { iphoneStrategyV2, ipadStrategyV2, macStrategyV2, watchStrategyV2 };
+export { iphoneStrategyV2, ipadStrategyV2, macStrategyV2, watchStrategyV2, androidStrategyV2 };
 
 export function getDeviceStrategyV2(deviceType: DeviceStrategyV2['deviceType']): DeviceStrategyV2 {
   switch (deviceType) {
@@ -16,6 +17,8 @@ export function getDeviceStrategyV2(deviceType: DeviceStrategyV2['deviceType']):
     return macStrategyV2;
   case 'watch':
     return watchStrategyV2;
+  case 'android':
+    return androidStrategyV2;
   default: {
     const exhaustiveCheck: never = deviceType;
     return exhaustiveCheck;

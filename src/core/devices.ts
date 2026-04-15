@@ -17,7 +17,7 @@ export interface DeviceFrame {
     width: number;
     height: number;
   };
-  deviceType: 'iphone' | 'ipad' | 'mac' | 'watch';
+  deviceType: 'iphone' | 'ipad' | 'mac' | 'watch' | 'android';
   originalName?: string;
   maskPath?: string;
 }
@@ -529,6 +529,28 @@ export let frameRegistry: DeviceFrame[] = [
     frameHeight: 732,
     screenRect: { x: 114, y: 308, width: 324, height: 394 },
     deviceType: 'watch'
+  },
+
+  // Android frames
+  // Samsung Galaxy S21 Ultra 5G
+  {
+    name: 'samsung-galaxy-s21-ultra-portrait',
+    displayName: 'Samsung Galaxy S21 Ultra 5G',
+    orientation: 'portrait',
+    frameWidth: 1540,
+    frameHeight: 3324,
+    screenRect: { x: 44, y: 54, width: 1440, height: 3200 },
+    deviceType: 'android'
+  },
+  // Google Pixel 5
+  {
+    name: 'google-pixel-5-portrait',
+    displayName: 'Google Pixel 5',
+    orientation: 'portrait',
+    frameWidth: 1204,
+    frameHeight: 2456,
+    screenRect: { x: 58, y: 58, width: 1080, height: 2340 },
+    deviceType: 'android'
   }
 ];
 
@@ -546,7 +568,7 @@ export function detectOrientation(width: number, height: number): Orientation {
 export function detectDeviceTypeFromDimensions(
   width: number,
   height: number
-): 'iphone' | 'ipad' | 'mac' | 'watch' | null {
+): 'iphone' | 'ipad' | 'mac' | 'watch' | 'android' | null {
   if (!width || !height) return null;
 
   const w = Math.max(width, height);
@@ -570,6 +592,18 @@ export function detectDeviceTypeFromDimensions(
   // Mac: typically 16:10 (~1.6) or 16:9 (~1.78) and large pixel counts
   if (aspect >= 1.50 && aspect <= 1.85 && pixels >= 2_000_000) {
     return 'mac';
+  }
+
+  // Android: common Android resolutions (check before iPhone since they share aspect ratios)
+  // Samsung Galaxy S series: 1440x3200 (20:9), 1080x2400 (20:9), 1440x3088
+  // Google Pixel: 1080x2340 (19.5:9), 1080x2400, 1344x2992
+  const androidResolutions = [
+    '1440x3200', '3200x1440', '1440x3088', '3088x1440',
+    '1344x2992', '2992x1344'
+  ];
+  const resKey = `${width}x${height}`;
+  if (androidResolutions.includes(resKey)) {
+    return 'android';
   }
 
   // iPhone: taller ratios (19.5:9 ≈ 2.17) or older 16:9 ≈ 1.78 at phone pixel counts
@@ -649,7 +683,12 @@ const RESOLUTION_TO_DEVICE: Record<string, string> = {
   // Watch resolutions
   '410x502': 'watch-ultra',
   '396x484': 'watch-series-9-45mm',
-  '368x448': 'watch-series-9-41mm'
+  '368x448': 'watch-series-9-41mm',
+
+  // Android resolutions (portrait)
+  '1440x3200': 'samsung-galaxy-s21-ultra',
+  '1440x3088': 'samsung-galaxy-s24-ultra',
+  '1344x2992': 'google-pixel-9-pro'
 };
 
 /**
@@ -666,7 +705,7 @@ function detectExactDevice(width: number, height: number): string | null {
 export function findBestFrame(
   screenshotWidth: number,
   screenshotHeight: number,
-  deviceType: 'iphone' | 'ipad' | 'mac' | 'watch',
+  deviceType: 'iphone' | 'ipad' | 'mac' | 'watch' | 'android',
   preferredFrame?: string
 ): DeviceFrame | null {
   const orientation = detectOrientation(screenshotWidth, screenshotHeight);
@@ -888,7 +927,7 @@ export async function loadFrame(framePath: string, frameName: string): Promise<B
 export async function autoSelectFrame(
   screenshotPath: string,
   framesDir: string,
-  deviceType: 'iphone' | 'ipad' | 'mac' | 'watch',
+  deviceType: 'iphone' | 'ipad' | 'mac' | 'watch' | 'android',
   preferredFrame?: string,
   dryRun: boolean = false
 ): Promise<{ frame: Buffer | null; metadata: DeviceFrame | null }> {

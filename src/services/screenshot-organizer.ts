@@ -145,7 +145,7 @@ export async function organizeScreenshots(options: OrganizeOptions): Promise<Org
   };
 
   // Use specified devices or default to all
-  const allDevices = ['iphone', 'ipad', 'mac', 'watch'];
+  const allDevices = ['iphone', 'ipad', 'mac', 'watch', 'android'];
   const devices = options.devices && options.devices.length > 0
     ? options.devices.filter(d => allDevices.includes(d.toLowerCase()))
     : allDevices;
@@ -281,7 +281,7 @@ export async function organizeScreenshots(options: OrganizeOptions): Promise<Org
  */
 export async function detectAvailableLanguages(sourceDir: string): Promise<Map<string, Set<string>>> {
   const languagesByDevice = new Map<string, Set<string>>();
-  const devices = ['iphone', 'ipad', 'mac', 'watch'];
+  const devices = ['iphone', 'ipad', 'mac', 'watch', 'android'];
 
   for (const device of devices) {
     const devicePath = path.join(sourceDir, device);

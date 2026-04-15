@@ -52,7 +52,7 @@ export async function validateExport(
 
   // Check if source is the correct directory structure
   const sourceContents = await fs.readdir(source);
-  const allDevices = ['iphone', 'ipad', 'mac', 'watch'];
+  const allDevices = ['iphone', 'ipad', 'mac', 'watch', 'android'];
   const hasDeviceDirectories = sourceContents.some(item =>
     allDevices.includes(item.toLowerCase())
   );

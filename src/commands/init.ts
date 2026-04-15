@@ -31,7 +31,7 @@ ${pc.bold('Next Steps:')}
         const root = process.cwd();
         const appshotDir = path.join(root, '.appshot');
         const configPath = path.join(appshotDir, 'config.json');
-        const devices = ['iphone', 'ipad', 'mac', 'watch'];
+        const devices = ['iphone', 'ipad', 'mac', 'watch', 'android'];
 
         const scaffold: AppshotConfigV2 = {
           version: 2,

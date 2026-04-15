@@ -165,7 +165,7 @@ export interface AppshotConfigV2 {
 }
 
 export interface DeviceStrategyV2 {
-  deviceType: 'iphone' | 'ipad' | 'mac' | 'watch';
+  deviceType: 'iphone' | 'ipad' | 'mac' | 'watch' | 'android';
   captionRatio: number;
   minCaptionPx: number;
   edgePadding: number;

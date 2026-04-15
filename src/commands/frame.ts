@@ -6,7 +6,7 @@ import sharp from 'sharp';
 import { initializeFrameRegistry, getImageDimensions, autoSelectFrame, detectDeviceTypeFromDimensions } from '../core/devices.js';
 import { composeFrameOnly } from '../core/compose.js';
 
-type DeviceType = 'iphone' | 'ipad' | 'mac' | 'watch';
+type DeviceType = 'iphone' | 'ipad' | 'mac' | 'watch' | 'android';
 
 type FrameTone = 'original' | 'neutral';
 
@@ -167,7 +167,7 @@ export default function frameCmd() {
     .description('Apply device frames to screenshots with a transparent background (no gradients or captions)')
     .argument('<input>', 'input image file or directory')
     .option('-o, --output <dir>', 'output directory (default: same as input)')
-    .option('-d, --device <type>', 'force device type (iphone|ipad|mac|watch)')
+    .option('-d, --device <type>', 'force device type (iphone|ipad|mac|watch|android)')
     .option('-r, --recursive', 'process directories recursively')
     .option('-f, --format <type>', 'output format (png|jpeg)', 'png')
     .option('--suffix <text>', 'filename suffix when not overwriting', '-framed')
@@ -212,7 +212,7 @@ ${pc.bold('Examples:')}
       };
 
       // Validate device option if provided
-      if (options.device && !['iphone', 'ipad', 'mac', 'watch'].includes(options.device)) {
+      if (options.device && !['iphone', 'ipad', 'mac', 'watch', 'android'].includes(options.device)) {
         console.error(pc.red('Error:'), `Invalid --device value: ${options.device}`);
         process.exit(1);
       }

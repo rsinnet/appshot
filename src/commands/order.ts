@@ -15,7 +15,7 @@ import {
 export default function orderCmd() {
   const cmd = new Command('order')
     .description('Manage screenshot ordering for App Store submissions')
-    .option('--device <name>', 'Specific device to order (iphone|ipad|mac|watch)')
+    .option('--device <name>', 'Specific device to order (iphone|ipad|mac|watch|android)')
     .option('--source <dir>', 'Source directory containing screenshots', './final')
     .option('--lang <code>', 'Language code for screenshots', 'en')
     .option('--show', 'Display current order without editing')
@@ -244,7 +244,7 @@ async function interactiveOrder(screenshots: string[]): Promise<string[]> {
  * Get available devices from source directory
  */
 async function getAvailableDevices(sourcePath: string, language: string): Promise<string[]> {
-  const devices = ['iphone', 'ipad', 'mac', 'watch'];
+  const devices = ['iphone', 'ipad', 'mac', 'watch', 'android'];
   const available: string[] = [];
 
   for (const device of devices) {

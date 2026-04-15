@@ -411,8 +411,8 @@ ${pc.bold('Notes:')}
           : [resolvedLang];
 
         const deviceKey = resolvedDevice.toLowerCase();
-        if (!['iphone', 'ipad', 'mac', 'watch'].includes(deviceKey)) {
-          console.error(pc.red('Error:'), 'Device must be one of: iphone, ipad, mac, watch');
+        if (!['iphone', 'ipad', 'mac', 'watch', 'android'].includes(deviceKey)) {
+          console.error(pc.red('Error:'), 'Device must be one of: iphone, ipad, mac, watch, android');
           process.exit(1);
         }
 
@@ -427,12 +427,12 @@ ${pc.bold('Notes:')}
         const { width: outputWidth, height: outputHeight } = await resolveOutputSize(
           inputDir,
           resolution,
-          deviceKey as 'iphone' | 'ipad' | 'mac' | 'watch'
+          deviceKey as 'iphone' | 'ipad' | 'mac' | 'watch' | 'android'
         );
 
         const layout = (config as any).layout || 'header';
         const constraintLayout = layout === 'screenshot-only' ? 'header' : layout;
-        const strategy = getDeviceStrategyV2(deviceKey as 'iphone' | 'ipad' | 'mac' | 'watch');
+        const strategy = getDeviceStrategyV2(deviceKey as 'iphone' | 'ipad' | 'mac' | 'watch' | 'android');
         const regions = computeRegions({
           canvasWidth: outputWidth,
           canvasHeight: outputHeight,
@@ -591,7 +591,7 @@ ${pc.bold('Notes:')}
 async function resolveOutputSize(
   inputDir: string,
   resolution: string | undefined,
-  deviceType: 'iphone' | 'ipad' | 'mac' | 'watch'
+  deviceType: 'iphone' | 'ipad' | 'mac' | 'watch' | 'android'
 ): Promise<{ width: number; height: number }> {
   if (resolution) {
     const [configWidth, configHeight] = resolution.split('x').map(Number);

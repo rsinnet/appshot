@@ -547,7 +547,7 @@ function registerLanguagesTool(server: McpServer) {
     const allLanguages = new Set<string>();
     let captionCount = 0;
 
-    const devices = args.device ? [args.device] : ['iphone', 'ipad', 'mac', 'watch'];
+    const devices = args.device ? [args.device] : ['iphone', 'ipad', 'mac', 'watch', 'android'];
 
     for (const device of devices) {
       const captionPath = path.join(captionsDir, `${device}.json`);

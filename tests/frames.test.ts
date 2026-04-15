@@ -289,7 +289,7 @@ describe('Frames.json validation', () => {
         expect(frame.name).toBeDefined();
         expect(frame.displayName).toBeDefined();
         expect(frame.orientation).toMatch(/^(portrait|landscape)$/);
-        expect(frame.deviceType).toMatch(/^(iphone|ipad|mac|watch)$/);
+        expect(frame.deviceType).toMatch(/^(iphone|ipad|mac|watch|android)$/);
         expect(frame.frameWidth).toBeGreaterThan(0);
         expect(frame.frameHeight).toBeGreaterThan(0);
         expect(frame.screenRect).toBeDefined();
@@ -303,7 +303,7 @@ describe('Frames.json validation', () => {
     it('should have frames for all device types', async () => {
       const registry = await buildFrameRegistry(FRAMES_DIR);
       
-      const deviceTypes = ['iphone', 'ipad', 'mac', 'watch'];
+      const deviceTypes = ['iphone', 'ipad', 'mac', 'watch', 'android'];
       deviceTypes.forEach(deviceType => {
         const frames = registry.filter(f => f.deviceType === deviceType);
         expect(frames.length, `Should have frames for ${deviceType}`).toBeGreaterThan(0);

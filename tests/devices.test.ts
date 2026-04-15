@@ -168,8 +168,14 @@ describe('devices', () => {
 
     it('should return null if no frames match device type', () => {
       // @ts-ignore - testing invalid device type
-      const frame = findBestFrame(1000, 2000, 'android');
+      const frame = findBestFrame(1000, 2000, 'tablet' as any);
       expect(frame).toBeNull();
+    });
+
+    it('should find Android frame for android device type', () => {
+      const frame = findBestFrame(1440, 3200, 'android');
+      expect(frame).not.toBeNull();
+      expect(frame?.deviceType).toBe('android');
     });
   });
 
@@ -332,7 +338,7 @@ describe('devices', () => {
 
   describe('frameRegistry', () => {
     it('should have frames for all device types', () => {
-      const deviceTypes = ['iphone', 'ipad', 'mac', 'watch'];
+      const deviceTypes = ['iphone', 'ipad', 'mac', 'watch', 'android'];
       
       for (const deviceType of deviceTypes) {
         const frames = frameRegistry.filter(f => f.deviceType === deviceType);

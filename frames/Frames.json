@@ -304,5 +304,21 @@
       }
     }
   },
+  "Android": {
+    "Samsung Galaxy S21 Ultra 5G": {
+      "Portrait": {
+        "x": "44",
+        "y": "54",
+        "name": "Samsung Galaxy S21 Ultra 5G"
+      }
+    },
+    "Google Pixel 5": {
+      "Portrait": {
+        "x": "58",
+        "y": "58",
+        "name": "Google Pixel 5"
+      }
+    }
+  },
   "version": "3.2"
 }

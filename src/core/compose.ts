@@ -247,7 +247,7 @@ export interface ComposeOptions {
       height: number;
     };
     maskPath?: string;
-    deviceType?: 'iphone' | 'ipad' | 'mac' | 'watch';
+    deviceType?: 'iphone' | 'ipad' | 'mac' | 'watch' | 'android';
     displayName?: string;
     name?: string;
   };
@@ -1309,7 +1309,7 @@ export interface ComposeV2Options {
     frameHeight: number;
     screenRect: { x: number; y: number; width: number; height: number };
     maskPath?: string;
-    deviceType?: 'iphone' | 'ipad' | 'mac' | 'watch';
+    deviceType?: 'iphone' | 'ipad' | 'mac' | 'watch' | 'android';
     displayName?: string;
     name?: string;
   };
@@ -1483,7 +1483,7 @@ export async function composeFrameOnly(options: {
     frameHeight: number;
     screenRect: { x: number; y: number; width: number; height: number };
     maskPath?: string;
-    deviceType?: 'iphone' | 'ipad' | 'mac' | 'watch';
+    deviceType?: 'iphone' | 'ipad' | 'mac' | 'watch' | 'android';
     displayName?: string;
     name?: string;
   };

@@ -15,6 +15,7 @@ export interface FramesData {
   iPhone?: Record<string, any>;
   iPad?: Record<string, any>;
   Watch?: Record<string, any>;
+  Android?: Record<string, any>;
   version?: string;
 }
 
@@ -78,6 +79,16 @@ const DEVICE_RESOLUTIONS: Record<string, { portrait: { width: number; height: nu
   'macbook pro 2021 14': { portrait: { width: 3024, height: 1964 } },
   'macbook air 2022': { portrait: { width: 2560, height: 1664 } },
   'imac 2021': { portrait: { width: 4480, height: 2520 } },
+
+  // Android resolutions
+  'samsung galaxy s21 ultra': { portrait: { width: 1440, height: 3200 } },
+  'samsung galaxy s21': { portrait: { width: 1080, height: 2400 } },
+  'samsung galaxy s20': { portrait: { width: 1440, height: 3200 } },
+  'samsung galaxy s10': { portrait: { width: 1440, height: 3040 } },
+  'samsung galaxy note 10': { portrait: { width: 1080, height: 2280 } },
+  'google pixel 5': { portrait: { width: 1080, height: 2340 } },
+  'google pixel 4': { portrait: { width: 1080, height: 2280 } },
+  'google pixel 3': { portrait: { width: 1080, height: 2160 } },
 
   // Default fallback
   'default': { portrait: { width: 0, height: 0 } }
@@ -489,6 +500,90 @@ export async function buildFrameRegistry(framesDir: string) {
             }
           }
         }
+      }
+    }
+  }
+
+  // Process Android devices
+  if (framesData.Android) {
+    for (const [_model, variants] of Object.entries(framesData.Android)) {
+      if (!variants || typeof variants !== 'object') continue;
+
+      const frame = parseFrameEntry(variants);
+      if (frame) {
+        const framePath = path.join(framesDir, `${frame.name}.png`);
+        const dimensions = await getFrameDimensions(framePath);
+
+        if (dimensions) {
+          const screenshotDims = getScreenshotDimensions(frame.name, 'portrait');
+          const calculatedWidth = dimensions.width - (parseInt(frame.x) || 0) * 2;
+          const calculatedHeight = dimensions.height - (parseInt(frame.y) || 0) * 2;
+          const screenWidth = screenshotDims.width ? Math.min(screenshotDims.width, calculatedWidth) : calculatedWidth;
+          const screenHeight = screenshotDims.height ? Math.min(screenshotDims.height, calculatedHeight) : calculatedHeight;
+
+          const maskPath = path.join(framesDir, `${frame.name}_mask.png`);
+          const maskExists = await fs.access(maskPath).then(() => true).catch(() => false);
+
+          registry.push({
+            name: frame.name.toLowerCase().replace(/ /g, '-'),
+            displayName: frame.name,
+            orientation: 'portrait' as const,
+            frameWidth: dimensions.width,
+            frameHeight: dimensions.height,
+            screenRect: {
+              x: parseInt(frame.x) || 0,
+              y: parseInt(frame.y) || 0,
+              width: screenWidth,
+              height: screenHeight
+            },
+            deviceType: 'android' as const,
+            originalName: frame.name,
+            maskPath: maskExists ? maskPath : undefined
+          });
+        }
+      } else {
+        // Handle Portrait/Landscape directly under model (e.g., model -> { Portrait: { x, y, name } })
+        const processAndroidOrientation = async (orientation: 'Portrait' | 'Landscape') => {
+          const orientationKey = orientation.toLowerCase() as 'portrait' | 'landscape';
+          if ((variants as any)[orientation]) {
+            const orientationFrame = parseFrameEntry((variants as any)[orientation]);
+            if (orientationFrame) {
+              const framePath = path.join(framesDir, `${orientationFrame.name}.png`);
+              const dimensions = await getFrameDimensions(framePath);
+
+              if (dimensions) {
+                const screenshotDims = getScreenshotDimensions(orientationFrame.name, orientationKey);
+                const calculatedWidth = dimensions.width - (parseInt(orientationFrame.x) || 0) * 2;
+                const calculatedHeight = dimensions.height - (parseInt(orientationFrame.y) || 0) * 2;
+                const screenWidth = screenshotDims.width ? Math.min(screenshotDims.width, calculatedWidth) : calculatedWidth;
+                const screenHeight = screenshotDims.height ? Math.min(screenshotDims.height, calculatedHeight) : calculatedHeight;
+
+                const maskPath = path.join(framesDir, `${orientationFrame.name}_mask.png`);
+                const maskExists = await fs.access(maskPath).then(() => true).catch(() => false);
+
+                registry.push({
+                  name: orientationFrame.name.toLowerCase().replace(/ /g, '-'),
+                  displayName: orientationFrame.name,
+                  orientation: orientationKey,
+                  frameWidth: dimensions.width,
+                  frameHeight: dimensions.height,
+                  screenRect: {
+                    x: parseInt(orientationFrame.x) || 0,
+                    y: parseInt(orientationFrame.y) || 0,
+                    width: screenWidth,
+                    height: screenHeight
+                  },
+                  deviceType: 'android' as const,
+                  originalName: orientationFrame.name,
+                  maskPath: maskExists ? maskPath : undefined
+                });
+              }
+            }
+          }
+        };
+
+        await processAndroidOrientation('Portrait');
+        await processAndroidOrientation('Landscape');
       }
     }
   }

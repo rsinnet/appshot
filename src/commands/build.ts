@@ -16,7 +16,7 @@ import { Spinner } from '../utils/spinner.js';
 export default function buildCmd() {
   const cmd = new Command('build')
     .description('Generate final screenshots with frames, gradients, and captions')
-    .option('--devices <list>', 'comma-separated device list (e.g., iphone,ipad)', 'iphone,ipad,mac,watch')
+    .option('--devices <list>', 'comma-separated device list (e.g., iphone,ipad)', 'iphone,ipad,mac,watch,android')
     .option('--preset <ids>', 'use specific App Store presets (e.g., iphone-6-9,ipad-13)')
     .option('--config <file>', 'use specific config file', 'appshot.json')
     .option('--langs <list>', 'comma-separated language codes (e.g., en,fr,de)')
@@ -283,7 +283,7 @@ ${pc.bold('Language Detection:')}
                     const result = await autoSelectFrame(
                       inputPath,
                       path.resolve(framesDir),
-                      device as 'iphone' | 'ipad' | 'mac' | 'watch',
+                      device as 'iphone' | 'ipad' | 'mac' | 'watch' | 'android',
                       isV2 ? undefined : (deviceConfig as AppshotConfig['devices'][string]).preferredFrame,
                       opts.dryRun // Pass dry-run flag
                     );
@@ -384,7 +384,7 @@ ${pc.bold('Language Detection:')}
                           outputWidth: outWidth,
                           outputHeight: outHeight,
                           layout: configV2.layout,
-                          deviceType: device as 'iphone' | 'ipad' | 'mac' | 'watch',
+                          deviceType: device as 'iphone' | 'ipad' | 'mac' | 'watch' | 'android',
                           deviceInputPath: inputDir,
                           verbose: opts.verbose
                         });

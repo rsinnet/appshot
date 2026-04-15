@@ -104,7 +104,7 @@ ${pc.bold('Integration with Fastlane:')}
         // Parse devices filter if provided
         let deviceFilter: string[] | undefined;
         if (opts.devices) {
-          const validDevices = ['iphone', 'ipad', 'mac', 'watch'];
+          const validDevices = ['iphone', 'ipad', 'mac', 'watch', 'android'];
           const requestedDevices = opts.devices.split(',').map((d: any) => String(d).trim().toLowerCase());
           deviceFilter = requestedDevices.filter((d: string) => validDevices.includes(d));
 
@@ -112,7 +112,7 @@ ${pc.bold('Integration with Fastlane:')}
           const invalidDevices = requestedDevices.filter((d: string) => !validDevices.includes(d));
           if (invalidDevices.length > 0 && !opts.json) {
             console.log(pc.yellow('Warning: Ignoring invalid devices:'), invalidDevices.join(', '));
-            console.log(pc.dim('Valid devices are: iphone, ipad, mac, watch'));
+            console.log(pc.dim('Valid devices are: iphone, ipad, mac, watch, android'));
           }
 
           if (deviceFilter && deviceFilter.length === 0) {

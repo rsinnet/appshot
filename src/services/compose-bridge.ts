@@ -127,7 +127,7 @@ export class ComposeBridge {
             outputWidth,
             outputHeight,
             layout: v2Config.layout,
-            deviceType: device.category as 'iphone' | 'ipad' | 'mac' | 'watch',
+            deviceType: device.category as 'iphone' | 'ipad' | 'mac' | 'watch' | 'android',
             deviceInputPath
           });
         } else {
