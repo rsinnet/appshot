@@ -12,6 +12,26 @@ function splitWords(text: string): string[] {
   return text.trim().split(/\s+/).filter(Boolean);
 }
 
+// Split text on explicit newlines, then wrap each segment independently
+function splitAndWrapWithNewlines(
+  text: string,
+  maxWidth: number,
+  fontSize: number
+): string[] {
+  if (!text.includes('\n')) {
+    return wrapWords(splitWords(text), maxWidth, fontSize);
+  }
+  const segments = text.split('\n');
+  const result: string[] = [];
+  for (const segment of segments) {
+    const trimmed = segment.trim();
+    if (trimmed) {
+      result.push(...wrapWords(splitWords(trimmed), maxWidth, fontSize));
+    }
+  }
+  return result;
+}
+
 function measureTextWidth(text: string, fontSize: number): number {
   // Heuristic fallback; real measurement will be added in compose layer.
   const averageCharWidth = fontSize * 0.55;
@@ -57,8 +77,7 @@ export function layoutCaptionText(
   const lineHeight = Math.round(fontSize * strategy.captionLineHeight);
   const maxLines = Math.max(1, strategy.captionMaxLines);
 
-  const words = splitWords(text);
-  const lines = wrapWords(words, maxWidth, fontSize);
+  const lines = splitAndWrapWithNewlines(text, maxWidth, fontSize);
 
   let truncated = false;
   let output = lines;

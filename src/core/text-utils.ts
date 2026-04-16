@@ -46,6 +46,16 @@ export function wrapText(
 ): string[] {
   if (!text) return [];
 
+  // Support explicit line breaks
+  if (text.includes('\n')) {
+    const segments = text.split('\n');
+    const result: string[] = [];
+    for (const segment of segments) {
+      result.push(...wrapText(segment, maxWidth, fontSize, maxLines ? maxLines - result.length : undefined));
+    }
+    return maxLines ? result.slice(0, maxLines) : result;
+  }
+
   const words = text.split(' ');
   const lines: string[] = [];
   let currentLine = '';
