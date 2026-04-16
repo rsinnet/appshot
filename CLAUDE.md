@@ -473,6 +473,30 @@ exec('appshot build --devices iphone');
 - Options: `--output`, `--device`, `--suffix`, `--overwrite`, `--dry-run`, `--verbose`.
 - Core additions: `composeFrameOnly()` and `detectDeviceTypeFromDimensions()`.
 
+## Frame Asset Sources
+
+When adding new device frames, use these vetted sources (checked for license + redistribution):
+
+- **iPhone / iPad / Mac / Watch** — bundled frames came from [Meta/Facebook Design device resources](https://www.meta.com/design-at-meta/tools/devices/) (formerly facebook.design/devices). The `Frames.json` naming convention (`iPhone 16 Pro Max Portrait.png`, etc.) matches their asset library. Terms: "do not repackage and redistribute these as your own" — treat as permissive for use within a tool, attribute.
+- **Samsung Galaxy S21 Ultra 5G, Google Pixel 5** — also sourced from Meta Design.
+- **Google Nexus 7 (7" tablet, `nexus_7_2013` artwork) and Nexus 10 (10" tablet)** — from [f2prateek/device-frame-generator](https://github.com/f2prateek/device-frame-generator) (Apache-2.0). Files live in that repo at `src/main/res/drawable-nodpi/nexus_{7_2013,10}_{port,land}_back.png`. Device metadata (screen offsets, real sizes) is in `DeviceModule.java` — use `setPortOffset` / `setLandOffset` / `setPortSize` / `setRealSize` to populate our `screenRect`. These frames are lower resolution (~1300×1900) than modern Android tablets; screenshots are downscaled to fit.
+
+**When picking frames for a new device**:
+1. Prefer **Apache 2.0** or **MIT**-licensed sources for anything bundled (`frames/` ships with the npm package).
+2. Avoid pure "do not redistribute" mockup sites (Freepik, imockups, most free-PSD sites) — fine for a user's own project, not for bundling.
+3. Check GitHub for `deviceframe`, `mockup-device-frames`, `device-frame-generator` — many Apache/MIT-licensed collections exist.
+4. Meta Design assets are the source-of-truth for Apple devices but explicitly Android-sparse.
+
+**To add a frame**:
+1. Drop PNG(s) in [frames/](frames/) following naming convention `<Device Name> [Portrait|Landscape].png`.
+2. Add entry to [frames/Frames.json](frames/Frames.json) under the appropriate top-level key (Android, iPhone, iPad, Mac, Watch). `x`/`y` are the top-left offset of the screen rect inside the frame image.
+3. Add entry to the default `frameRegistry` in [src/core/devices.ts](src/core/devices.ts) (loaded when Frames.json is unavailable).
+4. Add real screenshot resolution(s) to `DEVICE_RESOLUTIONS` in [src/core/frames-loader.ts](src/core/frames-loader.ts) so the calculated screen rect gets capped properly.
+5. Add resolution → device mapping in `RESOLUTION_TO_DEVICE` in [src/core/devices.ts](src/core/devices.ts).
+6. If the device has an aspect ratio that collides with another category (e.g. Android tablets overlap with Mac), add resolution to the `androidResolutions` list in `detectDeviceTypeFromDimensions` — **and ensure that check runs before the colliding category check**.
+
+**Known limitation**: `detectDeviceTypeFromDimensions` is a hard-coded aspect-ratio/resolution heuristic. Order-sensitive. Does not scale well to new devices. Prefer `--device` flag or folder-based routing ([screenshot-router.ts](src/services/screenshot-router.ts)) when possible.
+
 ## Device Integration (macOS Only)
 
 ### Overview

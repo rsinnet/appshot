@@ -318,6 +318,30 @@
         "y": "58",
         "name": "Google Pixel 5"
       }
+    },
+    "Google Nexus 7": {
+      "Portrait": {
+        "x": "244",
+        "y": "326",
+        "name": "Google Nexus 7 Portrait"
+      },
+      "Landscape": {
+        "x": "326",
+        "y": "245",
+        "name": "Google Nexus 7 Landscape"
+      }
+    },
+    "Google Nexus 10": {
+      "Portrait": {
+        "x": "217",
+        "y": "223",
+        "name": "Google Nexus 10 Portrait"
+      },
+      "Landscape": {
+        "x": "227",
+        "y": "217",
+        "name": "Google Nexus 10 Landscape"
+      }
     }
   },
   "version": "3.2"

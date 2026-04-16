@@ -90,6 +90,10 @@ const DEVICE_RESOLUTIONS: Record<string, { portrait: { width: number; height: nu
   'google pixel 4': { portrait: { width: 1080, height: 2280 } },
   'google pixel 3': { portrait: { width: 1080, height: 2160 } },
 
+  // Android tablet resolutions
+  'google nexus 7': { portrait: { width: 1200, height: 1920 }, landscape: { width: 1920, height: 1200 } },
+  'google nexus 10': { portrait: { width: 1600, height: 2560 }, landscape: { width: 2560, height: 1600 } },
+
   // Default fallback
   'default': { portrait: { width: 0, height: 0 } }
 };

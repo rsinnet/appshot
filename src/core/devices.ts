@@ -551,6 +551,44 @@ export let frameRegistry: DeviceFrame[] = [
     frameHeight: 2456,
     screenRect: { x: 58, y: 58, width: 1080, height: 2340 },
     deviceType: 'android'
+  },
+  // Google Nexus 7 (2013) — 7" Android tablet
+  {
+    name: 'google-nexus-7-portrait',
+    displayName: 'Google Nexus 7',
+    orientation: 'portrait',
+    frameWidth: 1289,
+    frameHeight: 1934,
+    screenRect: { x: 244, y: 326, width: 801, height: 1282 },
+    deviceType: 'android'
+  },
+  {
+    name: 'google-nexus-7-landscape',
+    displayName: 'Google Nexus 7',
+    orientation: 'landscape',
+    frameWidth: 1934,
+    frameHeight: 1289,
+    screenRect: { x: 326, y: 245, width: 1282, height: 799 },
+    deviceType: 'android'
+  },
+  // Google Nexus 10 — 10" Android tablet
+  {
+    name: 'google-nexus-10-portrait',
+    displayName: 'Google Nexus 10',
+    orientation: 'portrait',
+    frameWidth: 1248,
+    frameHeight: 1730,
+    screenRect: { x: 217, y: 223, width: 814, height: 1284 },
+    deviceType: 'android'
+  },
+  {
+    name: 'google-nexus-10-landscape',
+    displayName: 'Google Nexus 10',
+    orientation: 'landscape',
+    frameWidth: 1730,
+    frameHeight: 1248,
+    screenRect: { x: 227, y: 217, width: 1276, height: 814 },
+    deviceType: 'android'
   }
 ];
 
@@ -581,6 +619,22 @@ export function detectDeviceTypeFromDimensions(
     return 'watch';
   }
 
+  // Android: common Android resolutions (check before iPad/Mac since they share aspect ratios)
+  // Samsung Galaxy S series: 1440x3200 (20:9), 1080x2400 (20:9), 1440x3088
+  // Google Pixel: 1080x2340 (19.5:9), 1080x2400, 1344x2992
+  // Android tablets: Nexus 7 (1200x1920), Nexus 10 (1600x2560), generic 7"/10" (1280x800, 2560x1600)
+  const androidResolutions = [
+    '1440x3200', '3200x1440', '1440x3088', '3088x1440',
+    '1344x2992', '2992x1344',
+    '1200x1920', '1920x1200',
+    '1600x2560', '2560x1600',
+    '800x1280', '1280x800'
+  ];
+  const resKey = `${width}x${height}`;
+  if (androidResolutions.includes(resKey)) {
+    return 'android';
+  }
+
   // iPad: around 4:3 (1.33) in either orientation
   if (aspect >= 1.20 && aspect <= 1.40) {
     // ensure it's not too tiny (exclude watches) and not huge like Macs
@@ -592,18 +646,6 @@ export function detectDeviceTypeFromDimensions(
   // Mac: typically 16:10 (~1.6) or 16:9 (~1.78) and large pixel counts
   if (aspect >= 1.50 && aspect <= 1.85 && pixels >= 2_000_000) {
     return 'mac';
-  }
-
-  // Android: common Android resolutions (check before iPhone since they share aspect ratios)
-  // Samsung Galaxy S series: 1440x3200 (20:9), 1080x2400 (20:9), 1440x3088
-  // Google Pixel: 1080x2340 (19.5:9), 1080x2400, 1344x2992
-  const androidResolutions = [
-    '1440x3200', '3200x1440', '1440x3088', '3088x1440',
-    '1344x2992', '2992x1344'
-  ];
-  const resKey = `${width}x${height}`;
-  if (androidResolutions.includes(resKey)) {
-    return 'android';
   }
 
   // iPhone: taller ratios (19.5:9 ≈ 2.17) or older 16:9 ≈ 1.78 at phone pixel counts
@@ -688,7 +730,15 @@ const RESOLUTION_TO_DEVICE: Record<string, string> = {
   // Android resolutions (portrait)
   '1440x3200': 'samsung-galaxy-s21-ultra',
   '1440x3088': 'samsung-galaxy-s24-ultra',
-  '1344x2992': 'google-pixel-9-pro'
+  '1344x2992': 'google-pixel-9-pro',
+
+  // Android tablet resolutions
+  '1200x1920': 'google-nexus-7',
+  '1920x1200': 'google-nexus-7-landscape',
+  '1600x2560': 'google-nexus-10',
+  '2560x1600': 'google-nexus-10-landscape',
+  '800x1280': 'google-nexus-7',
+  '1280x800': 'google-nexus-7-landscape'
 };
 
 /**
